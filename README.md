@@ -1,11 +1,14 @@
 # resumebank.biz
 
 A recruiting site connecting candidates and employers, built in Go. See `@SPEC.md` for the original
-project brief. This repo is being built in phases. **Phase 1** (accounts, profiles, job postings,
-file uploads, and search), **Phase 2** (employer &lt;-&gt; candidate messaging and candidate-only job
-voting), **Phase 3a** (sitemap.xml and the hourly search-index rebuild), and **Phase 3b** (the
-embeddings/RAG candidate&lt;-&gt;job matching features) are done. Novice-friendly deployment docs are
-the only thing left (see "What's not built yet" below).
+project brief. Every feature in the spec is implemented: accounts and SEO-formatted profiles, job
+postings, file uploads, search, employer &lt;-&gt; candidate messaging, candidate-only job voting,
+sitemap.xml + hourly search-index rebuild, and the embeddings/RAG candidate&lt;-&gt;job matching
+features.
+
+This file covers running the app **locally**. To deploy it to production, see
+**[DEPLOYMENT.md](DEPLOYMENT.md)** — a from-scratch walkthrough for deploying to
+[Railway](https://railway.app), written for someone who's never deployed anything before.
 
 ## Stack
 
@@ -51,7 +54,10 @@ the only thing left (see "What's not built yet" below).
 
    `BASE_URL` is the absolute origin used to build `sitemap.xml`/`robots.txt` URLs; it defaults to
    `http://localhost:$PORT` if unset, but set it to your real domain in production. `OLLAMA_URL` and
-   `OLLAMA_EMBED_MODEL` both have the defaults shown above if unset.
+   `OLLAMA_EMBED_MODEL` both have the defaults shown above if unset. There's also `AUTO_MIGRATE`
+   (default `false`), which makes `cmd/server` apply pending migrations on startup instead of you
+   running `cmd/migrate` separately — leave it off locally (step 2 below covers migrations), it's
+   meant for deployment (see `DEPLOYMENT.md`).
 
 2. Apply database migrations:
 
@@ -188,6 +194,15 @@ gofmt -l .   # should print nothing
   entries will still return its "closest" results rather than an empty list, which is the intended
   interpretation of "will get better with time" as more profiles/jobs are added.
 
-## What's not built yet
+## Notable deployment decisions
 
-- Deployment configuration and novice-friendly deployment instructions (target: Railway)
+- **The app is deployed as a Docker image** (see `Dockerfile`) rather than relying on Railway's
+  zero-config builder, since it needs two separate binaries (`cmd/server`, `cmd/migrate`) and a
+  Dockerfile is the more predictable, explicit option. Templates and static assets are compiled into
+  the binary via `go:embed`, so the runtime image needs nothing but the compiled binaries.
+- **`AUTO_MIGRATE=true`** (an opt-in env var, off by default — see `internal/config`) makes
+  `cmd/server` apply pending migrations on startup before serving traffic, so a Railway deploy needs
+  no separate migration step. It's safe to leave on permanently: the migration runner tracks what's
+  already applied and is a no-op when there's nothing pending.
+- File storage and Ollama both need Railway **Volumes** to persist across redeploys (uploaded
+  resumes, and downloaded Ollama models respectively) — see `DEPLOYMENT.md` Steps 4 and 6.

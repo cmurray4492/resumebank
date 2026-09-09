@@ -19,6 +19,7 @@ type Config struct {
 	BaseURL        string // absolute origin (no trailing slash), used to build sitemap URLs
 	OllamaURL      string // base URL of a local Ollama server, for embeddings
 	EmbedModel     string // Ollama embedding model name
+	AutoMigrate    bool   // apply pending DB migrations on server startup (see cmd/server)
 }
 
 func Load() (*Config, error) {
@@ -33,6 +34,7 @@ func Load() (*Config, error) {
 	cfg.BaseURL = strings.TrimRight(getEnv("BASE_URL", "http://localhost:"+cfg.Port), "/")
 	cfg.OllamaURL = strings.TrimRight(getEnv("OLLAMA_URL", "http://localhost:11434"), "/")
 	cfg.EmbedModel = getEnv("OLLAMA_EMBED_MODEL", "nomic-embed-text")
+	cfg.AutoMigrate = getEnvBool("AUTO_MIGRATE", false)
 
 	if cfg.DatabaseURL == "" {
 		return nil, fmt.Errorf("DATABASE_URL is required")

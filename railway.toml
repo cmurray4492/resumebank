@@ -1,0 +1,7 @@
+# Railway config for the main app service. A root Dockerfile is present,
+# so Railway builds with it automatically; this file only pins the
+# healthcheck to our existing GET /healthz route. See DEPLOYMENT.md.
+[deploy]
+healthcheckPath = "/healthz"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"

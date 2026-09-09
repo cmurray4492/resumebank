@@ -31,6 +31,15 @@ func main() {
 	}
 	defer pool.Close()
 
+	if cfg.AutoMigrate {
+		migrateCtx, migrateCancel := context.WithTimeout(context.Background(), 60*time.Second)
+		err := db.Migrate(migrateCtx, pool)
+		migrateCancel()
+		if err != nil {
+			log.Fatalf("auto-migration failed: %v", err)
+		}
+	}
+
 	a, err := app.New(cfg, pool)
 	if err != nil {
 		log.Fatalf("app init error: %v", err)
