@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"resumebank/internal/app"
+	"resumebank/internal/background"
 	"resumebank/internal/config"
 	"resumebank/internal/db"
 	"resumebank/internal/web"
@@ -34,6 +35,20 @@ func main() {
 	if err != nil {
 		log.Fatalf("app init error: %v", err)
 	}
+
+	initCtx, initCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	if err := a.RefreshSitemap(initCtx); err != nil {
+		log.Printf("initial sitemap generation failed: %v", err)
+	}
+	if err := a.RefreshSearchIndex(initCtx); err != nil {
+		log.Printf("initial search index refresh failed: %v", err)
+	}
+	initCancel()
+
+	bgCtx, stopBackground := context.WithCancel(context.Background())
+	defer stopBackground()
+	go background.RunEvery(bgCtx, 24*time.Hour, "sitemap refresh", a.RefreshSitemap)
+	go background.RunEvery(bgCtx, time.Hour, "search index refresh", a.RefreshSearchIndex)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

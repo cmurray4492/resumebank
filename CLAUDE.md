@@ -12,7 +12,7 @@ Keep your replies extremely concise and focus on conveying key information. N o 
 
 ## Repository state
 
-This is a Go web app implementing `@SPEC.md` (a recruiting website, "resumebank.biz"), built in phases. **Phase 1** (accounts, candidate/employer/job CRUD with SEO pages, file uploads, Postgres full-text search) and **Phase 2** (employer&lt;-&gt;candidate messaging, candidate-only job voting) are implemented. Not yet built: the sitemap/hourly-search-index background jobs, the embeddings/RAG matching features, and deployment config — see `README.md`'s "What's not built yet" section for current status, and re-check it before assuming a feature is missing.
+This is a Go web app implementing `@SPEC.md` (a recruiting website, "resumebank.biz"), built in phases. **Phase 1** (accounts, candidate/employer/job CRUD with SEO pages, file uploads, Postgres full-text search), **Phase 2** (employer&lt;-&gt;candidate messaging, candidate-only job voting), and **Phase 3a** (sitemap.xml + hourly search-index rebuild) are implemented. Not yet built: the embeddings/RAG matching features and deployment config — see `README.md`'s "What's not built yet" section for current status, and re-check it before assuming a feature is missing.
 
 Confirmed technology choices (do not re-litigate; see `README.md` "Stack"): Go stdlib `net/http` + `html/template`, Bootstrap 5, Quill.js, PostgreSQL + `pgvector` (enabled now, used starting with the embeddings phase), `jackc/pgx/v5`, `bluemonday`, `bcrypt`, Go's standard `testing` package. Deployment target: Railway (not yet configured).
 

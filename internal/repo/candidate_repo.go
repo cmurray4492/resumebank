@@ -80,6 +80,26 @@ func (r *CandidateRepo) SlugExists(ctx context.Context, slug string) (bool, erro
 	return exists, err
 }
 
+// ListSlugs returns every candidate's slug and last-updated time, for
+// building the sitemap.
+func (r *CandidateRepo) ListSlugs(ctx context.Context) ([]SitemapEntry, error) {
+	rows, err := r.pool.Query(ctx, `SELECT slug, updated_at FROM candidates ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []SitemapEntry
+	for rows.Next() {
+		var e SitemapEntry
+		if err := rows.Scan(&e.Slug, &e.UpdatedAt); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
+}
+
 type CandidateSearchResult struct {
 	Candidate models.Candidate
 	Rank      float32

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -15,6 +16,7 @@ type Config struct {
 	CookieSecure   bool
 	UploadDir      string
 	MaxUploadBytes int64
+	BaseURL        string // absolute origin (no trailing slash), used to build sitemap URLs
 }
 
 func Load() (*Config, error) {
@@ -26,6 +28,7 @@ func Load() (*Config, error) {
 		CookieSecure:  getEnvBool("COOKIE_SECURE", false),
 		UploadDir:     getEnv("UPLOAD_DIR", "./uploads"),
 	}
+	cfg.BaseURL = strings.TrimRight(getEnv("BASE_URL", "http://localhost:"+cfg.Port), "/")
 
 	if cfg.DatabaseURL == "" {
 		return nil, fmt.Errorf("DATABASE_URL is required")

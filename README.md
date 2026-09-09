@@ -2,9 +2,9 @@
 
 A recruiting site connecting candidates and employers, built in Go. See `@SPEC.md` for the original
 project brief. This repo is being built in phases. **Phase 1** (accounts, profiles, job postings,
-file uploads, and search) and **Phase 2** (employer &lt;-&gt; candidate messaging and candidate-only
-job voting) are done. The sitemap/search-index background jobs and the embeddings/RAG "matching"
-features are planned for a later phase (see "What's not built yet" below).
+file uploads, and search), **Phase 2** (employer &lt;-&gt; candidate messaging and candidate-only job
+voting), and **Phase 3a** (sitemap.xml and the hourly search-index rebuild) are done. The
+embeddings/RAG "matching" features are planned for a later phase (see "What's not built yet" below).
 
 ## Stack
 
@@ -37,7 +37,11 @@ features are planned for a later phase (see "What's not built yet" below).
    ENV=development
    COOKIE_SECURE=false
    UPLOAD_DIR=./uploads
+   BASE_URL=http://localhost:8080
    ```
+
+   `BASE_URL` is the absolute origin used to build `sitemap.xml`/`robots.txt` URLs; it defaults to
+   `http://localhost:$PORT` if unset, but set it to your real domain in production.
 
 2. Apply database migrations:
 
@@ -69,6 +73,10 @@ features are planned for a later phase (see "What's not built yet" below).
 - As an employer, click "Message" on a candidate's profile, send a message, then log in as that
   candidate and confirm it shows up in `/messages` with an unread badge in the nav; reply and
   confirm the employer sees it.
+- Visit `/sitemap.xml` and `/robots.txt` and confirm every candidate/employer/job you created
+  appears with a `<lastmod>` date. Sign up a new candidate, confirm it's immediately findable via
+  `/search` (live), and confirm `SELECT * FROM search_index` in psql does *not* yet include it until
+  the next hourly refresh (or run `REFRESH MATERIALIZED VIEW CONCURRENTLY search_index;` manually).
 
 ## Running tests
 
@@ -112,9 +120,7 @@ gofmt -l .   # should print nothing
   persistent volume or object storage before a real deployment, since most PaaS platforms
   (Railway included) don't guarantee a persistent local filesystem across deploys — noted in
   `internal/storage` for the deployment phase.
-- Search is plain PostgreSQL full-text search (`tsvector`/`tsquery`), which needs no separate index
-  build step — this covers the spec's search requirement without the hourly rebuild job (planned
-  for a later phase alongside the sitemap job, using the same corpus differently).
+- Search is plain PostgreSQL full-text search (`tsvector`/`tsquery`).
 
 ## Notable Phase 2 decisions
 
@@ -127,9 +133,24 @@ gofmt -l .   # should print nothing
 - Voting is a toggle: clicking the same direction (up or down) you already voted clears your vote,
   rather than requiring a separate "remove vote" control.
 
+## Notable Phase 3a decisions
+
+- **The hourly search index doesn't back live search.** `search_index` is a Postgres materialized
+  view unioning candidates and jobs, refreshed hourly by a background goroutine
+  (`internal/background.RunEvery`) via `REFRESH MATERIALIZED VIEW CONCURRENTLY`. It exists to satisfy
+  the spec's literal "search index regenerated hourly" requirement, but `/search` intentionally
+  queries the live `candidates`/`jobs` tables directly instead, so new signups and job postings are
+  searchable immediately rather than lagging up to an hour behind. See
+  `internal/db/migrations/0010_search_index.sql`.
+- **The sitemap is generated once at server startup (blocking) and then every 24 hours** by the same
+  background scheduler, cached in memory (`internal/sitemap.Cache`) so `GET /sitemap.xml` never hits
+  the database. The startup generation means a fresh deploy never serves an empty sitemap while
+  waiting for the first daily tick.
+- `robots.txt` was added alongside the sitemap (not explicitly requested by the spec) since it's the
+  standard way search engines discover a sitemap, and directly serves the spec's SEO requirement.
+
 ## What's not built yet (planned for later phases)
 
-- Sitemap generation (daily) and a separate hourly search-index rebuild job
 - The two embeddings/RAG "matching" features (employer pastes a JD to find candidates; candidate
   pastes a resume to find jobs), which will use Ollama running locally with an embedding model
   (e.g. `nomic-embed-text`) against the `pgvector` column already enabled in the schema

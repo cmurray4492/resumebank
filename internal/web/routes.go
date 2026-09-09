@@ -20,6 +20,7 @@ func NewRouter(a *app.App) http.Handler {
 	searchH := NewSearchHandlers(a)
 	fileH := NewFileHandlers(a)
 	messageH := NewMessageHandlers(a)
+	sitemapH := NewSitemapHandlers(a)
 
 	mux.HandleFunc("GET /{$}", home.Show)
 	mux.HandleFunc("GET /healthz", home.Healthz)
@@ -61,9 +62,11 @@ func NewRouter(a *app.App) http.Handler {
 
 	mux.Handle("GET /static/", http.StripPrefix("/static/", a.StaticFileServer()))
 
-	// Phase 3 (not yet implemented): sitemap.xml, hourly search-index rebuild,
-	// and the two embeddings/RAG matching endpoints (POST /match/candidates,
-	// /match/jobs).
+	mux.HandleFunc("GET /sitemap.xml", sitemapH.Sitemap)
+	mux.HandleFunc("GET /robots.txt", sitemapH.Robots)
+
+	// Phase 3 (not yet implemented): the two embeddings/RAG matching
+	// endpoints (POST /match/candidates, /match/jobs).
 
 	var handler http.Handler = mux
 	handler = a.Auth.LoadSession(handler)

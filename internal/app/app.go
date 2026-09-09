@@ -3,6 +3,7 @@
 package app
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -11,6 +12,7 @@ import (
 	"resumebank/internal/config"
 	"resumebank/internal/render"
 	"resumebank/internal/repo"
+	"resumebank/internal/sitemap"
 	"resumebank/internal/storage"
 )
 
@@ -28,6 +30,7 @@ type App struct {
 	Files      *repo.FileRepo
 	Votes      *repo.VoteRepo
 	Messages   *repo.MessageRepo
+	Sitemap    *sitemap.Cache
 }
 
 func New(cfg *config.Config, pool *pgxpool.Pool) (*App, error) {
@@ -55,6 +58,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) (*App, error) {
 		Files:      repo.NewFileRepo(pool),
 		Votes:      repo.NewVoteRepo(pool),
 		Messages:   repo.NewMessageRepo(pool),
+		Sitemap:    sitemap.NewCache(),
 	}
 	return a, nil
 }
@@ -65,4 +69,50 @@ func (a *App) IsDev() bool {
 
 func (a *App) StaticFileServer() http.Handler {
 	return http.FileServer(render.StaticFileSystem(a.IsDev(), "web/static"))
+}
+
+// RefreshSitemap rebuilds sitemap.xml from the current candidates,
+// employers, and jobs and swaps it into the in-memory cache served by
+// GET /sitemap.xml.
+func (a *App) RefreshSitemap(ctx context.Context) error {
+	urls := []sitemap.URL{
+		{Loc: a.Config.BaseURL + "/"},
+		{Loc: a.Config.BaseURL + "/search"},
+	}
+
+	candidates, err := a.Candidates.ListSlugs(ctx)
+	if err != nil {
+		return err
+	}
+	for _, c := range candidates {
+		urls = append(urls, sitemap.URL{Loc: a.Config.BaseURL + "/candidates/" + c.Slug, LastMod: c.UpdatedAt})
+	}
+
+	employers, err := a.Employers.ListSlugs(ctx)
+	if err != nil {
+		return err
+	}
+	for _, e := range employers {
+		urls = append(urls, sitemap.URL{Loc: a.Config.BaseURL + "/employers/" + e.Slug, LastMod: e.UpdatedAt})
+	}
+
+	jobs, err := a.Jobs.ListSlugs(ctx)
+	if err != nil {
+		return err
+	}
+	for _, j := range jobs {
+		urls = append(urls, sitemap.URL{Loc: a.Config.BaseURL + "/jobs/" + j.Slug, LastMod: j.UpdatedAt})
+	}
+
+	a.Sitemap.Set(sitemap.BuildXML(urls))
+	return nil
+}
+
+// RefreshSearchIndex rebuilds the unified candidates+jobs search_index
+// materialized view. This is the literal "search index regenerated hourly"
+// artifact from the spec; live search pages query the base tables directly
+// instead (see internal/db/migrations/0010_search_index.sql).
+func (a *App) RefreshSearchIndex(ctx context.Context) error {
+	_, err := a.Pool.Exec(ctx, `REFRESH MATERIALIZED VIEW CONCURRENTLY search_index`)
+	return err
 }

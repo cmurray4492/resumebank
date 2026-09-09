@@ -78,6 +78,26 @@ func (r *JobRepo) SlugExists(ctx context.Context, slug string) (bool, error) {
 	return exists, err
 }
 
+// ListSlugs returns every job's slug and last-updated time, for building
+// the sitemap.
+func (r *JobRepo) ListSlugs(ctx context.Context) ([]SitemapEntry, error) {
+	rows, err := r.pool.Query(ctx, `SELECT slug, updated_at FROM jobs ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []SitemapEntry
+	for rows.Next() {
+		var e SitemapEntry
+		if err := rows.Scan(&e.Slug, &e.UpdatedAt); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
+}
+
 func (r *JobRepo) ListByEmployer(ctx context.Context, employerID int64) ([]models.Job, error) {
 	rows, err := r.pool.Query(ctx, `SELECT `+jobColumns+` FROM jobs WHERE employer_id = $1 ORDER BY date_posted DESC`, employerID)
 	if err != nil {
