@@ -1,5 +1,5 @@
 {{define "content"}}
-{{$post := .Data}}
+{{$post := .Data.Post}}
 <article style="max-width: 800px;">
   <p class="mb-2"><a href="/blog">&larr; Back to Blog</a></p>
   <h1 class="mb-1">{{$post.Title}}</h1>
@@ -8,6 +8,7 @@
     {{if $post.AuthorName}} &middot; {{$post.AuthorName}}{{end}}
   </p>
   <div class="mt-4">{{safeHTML $post.BodyHTML}}</div>
+  <div class="mt-4 pt-3 border-top">{{template "share_buttons.html.tmpl" .}}</div>
 </article>
 {{end}}
 

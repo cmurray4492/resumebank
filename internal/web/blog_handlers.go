@@ -7,6 +7,7 @@ import (
 
 	"resumebank/internal/app"
 	"resumebank/internal/httpx"
+	"resumebank/internal/models"
 	"resumebank/internal/repo"
 )
 
@@ -65,6 +66,12 @@ func (h *BlogHandlers) Index(w http.ResponseWriter, r *http.Request) {
 	h.App.Renderer.Render(w, http.StatusOK, "blog_index.html.tmpl", pd)
 }
 
+type blogShowView struct {
+	Post       *models.BlogPost
+	ShareURL   string
+	ShareTitle string
+}
+
 func (h *BlogHandlers) Show(w http.ResponseWriter, r *http.Request) {
 	slugVal := r.PathValue("slug")
 	post, err := h.App.Blog.GetPublishedBySlug(r.Context(), slugVal)
@@ -77,8 +84,13 @@ func (h *BlogHandlers) Show(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	view := blogShowView{
+		Post:       post,
+		ShareURL:   h.App.Config.BaseURL + "/blog/" + post.Slug,
+		ShareTitle: post.Title,
+	}
 	desc := excerpt(post.BodyText, 160)
-	pd := newPageData(h.App, w, r, post.Title, desc, post)
+	pd := newPageData(h.App, w, r, post.Title, desc, view)
 	h.App.Renderer.Render(w, http.StatusOK, "blog_show.html.tmpl", pd)
 }
 

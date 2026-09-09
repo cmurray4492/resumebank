@@ -28,6 +28,8 @@ type jobView struct {
 	DownVotes    int
 	CanVote      bool
 	CurrentVote  int16 // +1, -1, or 0 (no vote); only meaningful when CanVote
+	ShareURL     string
+	ShareTitle   string
 }
 
 func (h *JobHandlers) Show(w http.ResponseWriter, r *http.Request) {
@@ -61,6 +63,8 @@ func (h *JobHandlers) Show(w http.ResponseWriter, r *http.Request) {
 		IsOwner:      u != nil && u.ID == emp.UserID,
 		UpVotes:      up,
 		DownVotes:    down,
+		ShareURL:     h.App.Config.BaseURL + "/jobs/" + job.Slug,
+		ShareTitle:   job.Title + " at " + emp.CompanyName,
 	}
 	if u != nil && u.Role == models.RoleCandidate {
 		if candidate, err := h.App.Candidates.GetByUserID(r.Context(), u.ID); err == nil {

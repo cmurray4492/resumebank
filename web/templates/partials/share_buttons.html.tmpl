@@ -1,0 +1,31 @@
+{{/*
+  Share buttons for a single page. Invoke as {{template "share_buttons.html.tmpl" .}}
+  passing the full page context (not just .Data) - it reads .Data.ShareURL and
+  .Data.ShareTitle, so any page using this must set those two fields on its
+  view struct. Plain native share links (no third-party script/account
+  needed) plus a JS "copy link" button (see web/static/js/share.js).
+*/}}
+{{define "share_buttons.html.tmpl"}}
+<div class="d-flex align-items-center flex-wrap gap-2">
+  <span class="text-muted small me-1">Share:</span>
+  <a class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener noreferrer"
+     href="https://twitter.com/intent/tweet?text={{urlquery .Data.ShareTitle}}&url={{urlquery .Data.ShareURL}}">
+    X / Twitter
+  </a>
+  <a class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener noreferrer"
+     href="https://www.linkedin.com/sharing/share-offsite/?url={{urlquery .Data.ShareURL}}">
+    LinkedIn
+  </a>
+  <a class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener noreferrer"
+     href="https://www.facebook.com/sharer/sharer.php?u={{urlquery .Data.ShareURL}}">
+    Facebook
+  </a>
+  <a class="btn btn-sm btn-outline-secondary"
+     href="mailto:?subject={{urlquery .Data.ShareTitle}}&body={{urlquery .Data.ShareURL}}">
+    Email
+  </a>
+  <button type="button" class="btn btn-sm btn-outline-secondary js-copy-link" data-share-url="{{.Data.ShareURL}}">
+    Copy Link
+  </button>
+</div>
+{{end}}

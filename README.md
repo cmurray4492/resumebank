@@ -133,6 +133,9 @@ This file covers running the app **locally**. To deploy it to production, see
   a "password has been reset" banner, log in with the new password, and confirm the old password no
   longer works. Try reusing the same reset link a second time and confirm it's rejected as invalid.
   Repeat for an employer and an admin account — the admin flow redirects to `/admin/login` instead.
+- Visit any job page and any blog post; confirm the "Share" row's X/LinkedIn/Facebook/Email links
+  open with the right URL and title pre-filled, and clicking "Copy Link" copies the page's URL to
+  your clipboard (button briefly shows "Copied!").
 
 ## Running tests
 
@@ -283,6 +286,17 @@ Also added on top of the original spec, at the user's request ("password reset f
 - **Reset email delivery is fire-and-forget**, same pattern as embedding computation: the HTTP
   response never waits on token creation or SMTP, both of which happen in a background goroutine
   with their own timeout (`App.SendPasswordResetEmail`).
+
+## Notable share-button decisions
+
+Job and blog pages have "Share" buttons (X/Twitter, LinkedIn, Facebook, email, and a "Copy Link"
+button). Deliberately **not** the ShareThis.com widget — that would need a ShareThis account/property
+ID and loads their own tracking script alongside the share buttons. This is plain native share
+links (no third-party script, no account, no tracking) built with one shared partial,
+`web/templates/partials/share_buttons.html.tmpl`, invoked from both `job_show.html.tmpl` and
+`blog_show.html.tmpl` — any page that wants share buttons just needs a `ShareURL`/`ShareTitle` pair
+on its view struct and one `{{template "share_buttons.html.tmpl" .}}` call. "Copy Link" is the only
+part needing JavaScript (`web/static/js/share.js`, using the Clipboard API, loaded globally).
 
 ## Notable deployment decisions
 

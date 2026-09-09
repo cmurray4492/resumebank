@@ -113,6 +113,61 @@ func TestRenderSmoke_AdminPagesRenderWithoutError(t *testing.T) {
 	}
 }
 
+// TestRenderSmoke_ShareButtonsOnJobAndBlogPages covers the share_buttons
+// partial specifically, since it's the newest thing referenced via
+// {{template "x" .}} in job_show/blog_show and is exactly the kind of
+// addition that previously broke a page's entire render silently (see the
+// package doc comment above) if its defined template name were ever wrong.
+func TestRenderSmoke_ShareButtonsOnJobAndBlogPages(t *testing.T) {
+	a := newTestApp(t)
+	router := web.NewRouter(a)
+	ctx := context.Background()
+
+	employerUser, err := a.Users.Create(ctx, "acme@example.com", "hash", models.RoleEmployer)
+	if err != nil {
+		t.Fatalf("creating employer user: %v", err)
+	}
+	employer, err := a.Employers.Create(ctx, &models.Employer{
+		UserID: employerUser.ID, Slug: "acme", CompanyName: "Acme", Zipcode: "12345",
+	})
+	if err != nil {
+		t.Fatalf("creating employer: %v", err)
+	}
+	if _, err := a.Jobs.Create(ctx, &models.Job{
+		EmployerID: employer.ID, Slug: "acme-engineer", Title: "Engineer",
+		DescriptionHTML: "<p>D</p>", DescriptionText: "D",
+	}); err != nil {
+		t.Fatalf("creating job: %v", err)
+	}
+	if _, err := a.Blog.Create(ctx, &models.BlogPost{
+		Slug: "hello-world", Title: "Hello World", BodyHTML: "<p>Hi</p>", BodyText: "Hi", Published: true,
+	}); err != nil {
+		t.Fatalf("creating blog post: %v", err)
+	}
+
+	for _, path := range []string{"/jobs/acme-engineer", "/blog/hello-world"} {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, path, nil)
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+			}
+			body := rec.Body.String()
+			if strings.Contains(body, "render error") {
+				t.Fatalf("page rendered with an error instead of content: %s", body)
+			}
+			if !strings.Contains(body, "js-copy-link") {
+				t.Errorf("expected the share buttons partial to render (js-copy-link button missing): %s", body)
+			}
+			if !strings.Contains(body, "twitter.com/intent/tweet") || !strings.Contains(body, "linkedin.com/sharing") {
+				t.Errorf("expected X/LinkedIn share links to render: %s", body)
+			}
+		})
+	}
+}
+
 func assertRendersCleanly(t *testing.T, router http.Handler, path string, minBytes int) {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, path, nil)
