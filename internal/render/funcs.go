@@ -9,6 +9,9 @@ import (
 func FuncMap() template.FuncMap {
 	return template.FuncMap{
 		"safeHTML": func(s string) template.HTML { return template.HTML(s) },
+		"currentYear": func() int {
+			return time.Now().Year()
+		},
 		"formatDate": func(t time.Time) string {
 			return t.Format("January 2, 2006")
 		},

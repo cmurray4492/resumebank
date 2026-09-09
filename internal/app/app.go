@@ -83,6 +83,8 @@ func (a *App) RefreshSitemap(ctx context.Context) error {
 	urls := []sitemap.URL{
 		{Loc: a.Config.BaseURL + "/"},
 		{Loc: a.Config.BaseURL + "/search"},
+		{Loc: a.Config.BaseURL + "/about"},
+		{Loc: a.Config.BaseURL + "/terms"},
 	}
 
 	candidates, err := a.Candidates.ListSlugs(ctx)

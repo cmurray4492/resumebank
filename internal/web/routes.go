@@ -22,10 +22,13 @@ func NewRouter(a *app.App) http.Handler {
 	messageH := NewMessageHandlers(a)
 	sitemapH := NewSitemapHandlers(a)
 	matchH := NewMatchHandlers(a)
+	staticH := NewStaticPageHandlers(a)
 
 	mux.HandleFunc("GET /{$}", home.Show)
 	mux.HandleFunc("GET /healthz", home.Healthz)
 	mux.HandleFunc("GET /me", home.Me)
+	mux.HandleFunc("GET /about", staticH.About)
+	mux.HandleFunc("GET /terms", staticH.Terms)
 
 	mux.HandleFunc("GET /signup/candidate", authH.SignupCandidateForm)
 	mux.HandleFunc("POST /signup/candidate", authH.SignupCandidate)
