@@ -63,6 +63,11 @@ func (r *CandidateRepo) Update(ctx context.Context, c *models.Candidate) (*model
 	return scanCandidate(row)
 }
 
+func (r *CandidateRepo) GetByID(ctx context.Context, id int64) (*models.Candidate, error) {
+	row := r.pool.QueryRow(ctx, `SELECT `+candidateColumns+` FROM candidates WHERE id = $1`, id)
+	return scanCandidate(row)
+}
+
 func (r *CandidateRepo) GetBySlug(ctx context.Context, slug string) (*models.Candidate, error) {
 	row := r.pool.QueryRow(ctx, `SELECT `+candidateColumns+` FROM candidates WHERE slug = $1`, slug)
 	return scanCandidate(row)

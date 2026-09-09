@@ -4,7 +4,8 @@ A recruiting site connecting candidates and employers, built in Go. See `@SPEC.m
 project brief. Every feature in the spec is implemented: accounts and SEO-formatted profiles, job
 postings, file uploads, search, employer &lt;-&gt; candidate messaging, candidate-only job voting,
 sitemap.xml + hourly search-index rebuild, and the embeddings/RAG candidate&lt;-&gt;job matching
-features.
+features. Beyond the original spec, there's also a blog (`/blog`) and an admin panel (`/admin`) for
+managing blog posts and editing any candidate/employer/job.
 
 This file covers running the app **locally**. To deploy it to production, see
 **[DEPLOYMENT.md](DEPLOYMENT.md)** — a from-scratch walkthrough for deploying to
@@ -73,6 +74,16 @@ This file covers running the app **locally**. To deploy it to production, see
 
 4. Visit http://localhost:8080.
 
+5. To use the admin panel, create an admin account (there's no public admin signup):
+
+   ```
+   go run ./cmd/createadmin -email=admin@example.com -password=some-long-password
+   ```
+
+   Then log in at http://localhost:8080/admin/login. Running this again with the same email resets
+   that admin's password. It refuses to touch an email that already belongs to a candidate/employer
+   account, to prevent an email typo from accidentally granting admin access to an existing user.
+
 ### Manual verification walkthrough
 
 - Sign up as a candidate, fill in the required fields and resume (via the rich-text editor), save.
@@ -98,6 +109,15 @@ This file covers running the app **locally**. To deploy it to production, see
   Log in as a candidate, go to "Match Jobs", paste in a resume, and confirm the same in the other
   direction. Then stop Ollama and confirm both pages show "temporarily unavailable" instead of an
   error, and that signing up or editing a profile/job still works instantly either way.
+- Create an admin account (see step 5 above), log in at `/admin`, and confirm the dashboard shows
+  correct candidate/employer/job/blog-post counts. Create a blog post with "Published" checked and
+  confirm it shows up at `/blog` and its own `/blog/{slug}` page; uncheck "Published" and confirm it
+  404s publicly again; delete it and confirm it's gone.
+- From the admin panel, edit a candidate, a company, and a job you didn't create as that account —
+  confirm the change persists on the public page (ownership checks don't apply to admin edits by
+  design). Log out of admin and confirm `/admin` redirects to `/admin/login`. While logged in as a
+  regular candidate or employer, confirm visiting `/admin` also redirects to `/admin/login` — a
+  public-site session must never grant admin access.
 
 ## Running tests
 
@@ -193,6 +213,34 @@ gofmt -l .   # should print nothing
   are normalized) but no rank-independent quality threshold; a corpus with only weakly-related
   entries will still return its "closest" results rather than an empty list, which is the intended
   interpretation of "will get better with time" as more profiles/jobs are added.
+
+## Notable blog/admin decisions
+
+These two features were added on top of the original spec at the user's request, not from `@SPEC.md`.
+
+- **Admins are `users` rows with `role='admin'`**, reusing the existing password-hashing, session,
+  and CSRF infrastructure rather than a parallel account system — see
+  `internal/db/migrations/0012_admin_role.sql`. There is no public admin signup route; the only way
+  to create one is `cmd/createadmin`, which refuses to convert an existing candidate/employer email
+  to admin (to prevent a typo from granting admin access to the wrong account) and otherwise creates
+  the account or resets its password if it already exists.
+- **The admin session is a separate cookie** (`resumebank_admin_session`, scoped to `Path=/admin`)
+  from the public site's session cookie, and admin identity is loaded into a completely separate
+  request-context key (`AdminUserFromContext`, never `CurrentUser`). This means a public
+  candidate/employer session can never grant admin access even if someone reused the same browser,
+  and the public site's navbar/templates can never accidentally show admin-only state. See
+  `internal/auth/admin.go`.
+- **Admin panel uses its own layout** (`admin_base.html.tmpl`, no public navbar/footer) via a second
+  `Renderer.RenderAdmin` method — see `internal/render/render.go`. It carries a `noindex, nofollow`
+  meta tag and is deliberately left out of `sitemap.xml`.
+- **Admin can edit, but not delete, candidates/employers/jobs** (only their own blog posts support
+  delete) — matching exactly what was asked for; edits bypass ownership checks entirely (by design;
+  that's the point of an admin panel) but reuse the same repo `Update` methods and validation as the
+  owner-facing forms, and still trigger re-embedding when a resume/job description changes.
+- **Blog posts have no `conversations`-style extra tooling** (no categories, tags, or comments) —
+  title, rich-text body (via the same Quill/sanitize pipeline as resumes and job descriptions),
+  author name, and a published/draft flag. `published_at` is set the first time a post is published
+  and left alone on later edits, so it reflects the original publish date, not the last-edited date.
 
 ## Notable deployment decisions
 

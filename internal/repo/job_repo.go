@@ -67,6 +67,11 @@ func (r *JobRepo) Delete(ctx context.Context, id int64) error {
 	return err
 }
 
+func (r *JobRepo) GetByID(ctx context.Context, id int64) (*models.Job, error) {
+	row := r.pool.QueryRow(ctx, `SELECT `+jobColumns+` FROM jobs WHERE id = $1`, id)
+	return scanJob(row)
+}
+
 func (r *JobRepo) GetBySlug(ctx context.Context, slug string) (*models.Job, error) {
 	row := r.pool.QueryRow(ctx, `SELECT `+jobColumns+` FROM jobs WHERE slug = $1`, slug)
 	return scanJob(row)

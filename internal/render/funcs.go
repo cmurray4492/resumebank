@@ -15,6 +15,12 @@ func FuncMap() template.FuncMap {
 		"formatDate": func(t time.Time) string {
 			return t.Format("January 2, 2006")
 		},
+		"formatDateP": func(t *time.Time) string {
+			if t == nil {
+				return ""
+			}
+			return t.Format("January 2, 2006")
+		},
 		"derefInt": func(p *int) int {
 			if p == nil {
 				return 0

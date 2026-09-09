@@ -1,0 +1,72 @@
+{{define "content"}}
+{{$c := .Data}}
+<h1 class="h3 mb-4">Edit Candidate: {{$c.Name}}</h1>
+
+<form method="post" action="/admin/candidates/{{$c.ID}}/edit" novalidate style="max-width: 700px;">
+  <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+  <div class="mb-3">
+    <label class="form-label" for="name">Name *</label>
+    <input type="text" class="form-control {{if index .Errors "name"}}is-invalid{{end}}" id="name" name="name" value="{{$c.Name}}" required>
+    {{with index .Errors "name"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label" for="title">Title</label>
+    <input type="text" class="form-control" id="title" name="title" value="{{$c.Title}}">
+  </div>
+
+  <div class="row">
+    <div class="mb-3 col-md-4">
+      <label class="form-label" for="city">City</label>
+      <input type="text" class="form-control" id="city" name="city" value="{{$c.City}}">
+    </div>
+    <div class="mb-3 col-md-4">
+      <label class="form-label" for="state">State</label>
+      <input type="text" class="form-control" id="state" name="state" value="{{$c.State}}">
+    </div>
+    <div class="mb-3 col-md-4">
+      <label class="form-label" for="zipcode">Zipcode *</label>
+      <input type="text" class="form-control {{if index .Errors "zipcode"}}is-invalid{{end}}" id="zipcode" name="zipcode" value="{{$c.Zipcode}}" required>
+      {{with index .Errors "zipcode"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label" for="email">Email *</label>
+    <input type="email" class="form-control {{if index .Errors "email"}}is-invalid{{end}}" id="email" name="email" value="{{$c.Email}}" required>
+    {{with index .Errors "email"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label" for="linkedin_url">LinkedIn URL</label>
+    <input type="url" class="form-control" id="linkedin_url" name="linkedin_url" value="{{$c.LinkedInURL}}">
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label" for="skills">Skills</label>
+    <input type="text" class="form-control" id="skills" name="skills" value="{{$c.Skills}}">
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label" for="summary">Candidate Summary</label>
+    <textarea class="form-control" id="summary" name="summary" rows="3">{{$c.Summary}}</textarea>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Resume *</label>
+    <div id="resume-editor" style="height: 250px;"></div>
+    <textarea name="resume_html" id="resume_html" hidden>{{$c.ResumeHTML}}</textarea>
+    {{with index .Errors "resume_html"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+  </div>
+
+  <button type="submit" class="btn btn-primary">Save Changes</button>
+  <a href="/admin/candidates" class="btn btn-outline-secondary">Cancel</a>
+</form>
+{{end}}
+
+{{define "scripts"}}
+<script>
+  initRichTextEditor('resume-editor', 'resume_html');
+</script>
+{{end}}

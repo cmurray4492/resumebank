@@ -84,6 +84,30 @@ func (r *EmployerRepo) SlugExists(ctx context.Context, slug string) (bool, error
 	return exists, err
 }
 
+// ListAll returns employers most-recently-created first, for the admin panel.
+func (r *EmployerRepo) ListAll(ctx context.Context, limit, offset int) ([]models.Employer, int, error) {
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT count(*) FROM employers`).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := r.pool.Query(ctx, `SELECT `+employerColumns+` FROM employers ORDER BY created_at DESC LIMIT $1 OFFSET $2`, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var employers []models.Employer
+	for rows.Next() {
+		var e models.Employer
+		if err := rows.Scan(&e.ID, &e.UserID, &e.Slug, &e.CompanyName, &e.Industry, &e.City, &e.State, &e.Zipcode,
+			&e.Phone, &e.EmailAddress, &e.Website, &e.Description, &e.Locations, &e.CreatedAt, &e.UpdatedAt); err != nil {
+			return nil, 0, err
+		}
+		employers = append(employers, e)
+	}
+	return employers, total, rows.Err()
+}
+
 // ListSlugs returns every employer's slug and last-updated time, for
 // building the sitemap.
 func (r *EmployerRepo) ListSlugs(ctx context.Context) ([]SitemapEntry, error) {

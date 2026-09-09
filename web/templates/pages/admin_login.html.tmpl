@@ -1,0 +1,22 @@
+{{define "content"}}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <h1 class="h3 mb-4">Admin Login</h1>
+    <form method="post" action="/admin/login" novalidate>
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <div class="mb-3">
+        <label class="form-label" for="email">Email</label>
+        <input type="email" class="form-control {{if index .Errors "email"}}is-invalid{{end}}" id="email" name="email" required>
+        {{with index .Errors "email"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="password">Password</label>
+        <input type="password" class="form-control" id="password" name="password" required>
+      </div>
+      <button type="submit" class="btn btn-dark">Log In</button>
+    </form>
+  </div>
+</div>
+{{end}}
+
+{{define "scripts"}}{{end}}

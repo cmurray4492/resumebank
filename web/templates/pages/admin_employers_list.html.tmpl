@@ -1,0 +1,33 @@
+{{define "content"}}
+<h1 class="h3 mb-4">Companies</h1>
+
+{{if .Data.Employers}}
+  <table class="table bg-white">
+    <thead><tr><th>Company</th><th>Industry</th><th>Location</th><th></th></tr></thead>
+    <tbody>
+      {{range .Data.Employers}}
+        <tr>
+          <td>{{.CompanyName}}</td>
+          <td>{{.Industry}}</td>
+          <td>{{.City}}{{if .State}}, {{.State}}{{end}}</td>
+          <td class="text-end">
+            <a href="/employers/{{.Slug}}" class="me-2" target="_blank" rel="noopener">View</a>
+            <a href="/admin/employers/{{.ID}}/edit">Edit</a>
+          </td>
+        </tr>
+      {{end}}
+    </tbody>
+  </table>
+{{else}}
+  <p class="text-muted">No companies yet.</p>
+{{end}}
+
+<nav>
+  <ul class="pagination">
+    {{if .Data.HasPrevPage}}<li class="page-item"><a class="page-link" href="/admin/employers?page={{.Data.PrevPage}}">Previous</a></li>{{end}}
+    {{if .Data.HasNextPage}}<li class="page-item"><a class="page-link" href="/admin/employers?page={{.Data.NextPage}}">Next</a></li>{{end}}
+  </ul>
+</nav>
+{{end}}
+
+{{define "scripts"}}{{end}}

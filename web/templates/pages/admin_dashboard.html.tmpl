@@ -1,0 +1,35 @@
+{{define "content"}}
+<h1 class="h3 mb-4">Dashboard</h1>
+<div class="row g-3">
+  <div class="col-md-3">
+    <div class="card"><div class="card-body">
+      <div class="text-muted small">Candidates</div>
+      <div class="display-6">{{.Data.CandidateCount}}</div>
+      <a href="/admin/candidates">Manage &rarr;</a>
+    </div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="card"><div class="card-body">
+      <div class="text-muted small">Companies</div>
+      <div class="display-6">{{.Data.EmployerCount}}</div>
+      <a href="/admin/employers">Manage &rarr;</a>
+    </div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="card"><div class="card-body">
+      <div class="text-muted small">Jobs</div>
+      <div class="display-6">{{.Data.JobCount}}</div>
+      <a href="/admin/jobs">Manage &rarr;</a>
+    </div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="card"><div class="card-body">
+      <div class="text-muted small">Blog Posts</div>
+      <div class="display-6">{{.Data.BlogPostCount}}</div>
+      <a href="/admin/blog">Manage &rarr;</a>
+    </div></div>
+  </div>
+</div>
+{{end}}
+
+{{define "scripts"}}{{end}}

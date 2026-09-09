@@ -33,6 +33,7 @@ type App struct {
 	Files      *repo.FileRepo
 	Votes      *repo.VoteRepo
 	Messages   *repo.MessageRepo
+	Blog       *repo.BlogRepo
 	Sitemap    *sitemap.Cache
 	Embeddings *embeddings.Client
 }
@@ -62,6 +63,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) (*App, error) {
 		Files:      repo.NewFileRepo(pool),
 		Votes:      repo.NewVoteRepo(pool),
 		Messages:   repo.NewMessageRepo(pool),
+		Blog:       repo.NewBlogRepo(pool),
 		Sitemap:    sitemap.NewCache(),
 		Embeddings: embeddings.New(cfg.OllamaURL, cfg.EmbedModel),
 	}
@@ -85,6 +87,7 @@ func (a *App) RefreshSitemap(ctx context.Context) error {
 		{Loc: a.Config.BaseURL + "/search"},
 		{Loc: a.Config.BaseURL + "/about"},
 		{Loc: a.Config.BaseURL + "/terms"},
+		{Loc: a.Config.BaseURL + "/blog"},
 	}
 
 	candidates, err := a.Candidates.ListSlugs(ctx)
@@ -109,6 +112,14 @@ func (a *App) RefreshSitemap(ctx context.Context) error {
 	}
 	for _, j := range jobs {
 		urls = append(urls, sitemap.URL{Loc: a.Config.BaseURL + "/jobs/" + j.Slug, LastMod: j.UpdatedAt})
+	}
+
+	posts, err := a.Blog.ListPublishedSlugs(ctx)
+	if err != nil {
+		return err
+	}
+	for _, p := range posts {
+		urls = append(urls, sitemap.URL{Loc: a.Config.BaseURL + "/blog/" + p.Slug, LastMod: p.UpdatedAt})
 	}
 
 	a.Sitemap.Set(sitemap.BuildXML(urls))

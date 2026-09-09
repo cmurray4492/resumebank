@@ -23,12 +23,22 @@ func NewRouter(a *app.App) http.Handler {
 	sitemapH := NewSitemapHandlers(a)
 	matchH := NewMatchHandlers(a)
 	staticH := NewStaticPageHandlers(a)
+	blogH := NewBlogHandlers(a)
+	adminAuthH := NewAdminAuthHandlers(a)
+	adminDashboardH := NewAdminDashboardHandlers(a)
+	adminBlogH := NewAdminBlogHandlers(a)
+	adminCandidateH := NewAdminCandidateHandlers(a)
+	adminEmployerH := NewAdminEmployerHandlers(a)
+	adminJobH := NewAdminJobHandlers(a)
 
 	mux.HandleFunc("GET /{$}", home.Show)
 	mux.HandleFunc("GET /healthz", home.Healthz)
 	mux.HandleFunc("GET /me", home.Me)
 	mux.HandleFunc("GET /about", staticH.About)
 	mux.HandleFunc("GET /terms", staticH.Terms)
+
+	mux.HandleFunc("GET /blog", blogH.Index)
+	mux.HandleFunc("GET /blog/{slug}", blogH.Show)
 
 	mux.HandleFunc("GET /signup/candidate", authH.SignupCandidateForm)
 	mux.HandleFunc("POST /signup/candidate", authH.SignupCandidate)
@@ -74,7 +84,36 @@ func NewRouter(a *app.App) http.Handler {
 	mux.HandleFunc("GET /match/jobs", a.Auth.RequireRole(models.RoleCandidate, matchH.JobMatchForm))
 	mux.HandleFunc("POST /match/jobs", a.Auth.RequireRole(models.RoleCandidate, matchH.MatchJobs))
 
+	// Admin panel. /admin/login is the only unauthenticated admin route;
+	// everything else under /admin is gated by RequireAdmin. There is no
+	// public admin signup - see cmd/createadmin.
+	mux.HandleFunc("GET /admin/login", adminAuthH.LoginForm)
+	mux.HandleFunc("POST /admin/login", adminAuthH.Login)
+	mux.HandleFunc("POST /admin/logout", a.Auth.RequireAdmin(adminAuthH.Logout))
+
+	mux.HandleFunc("GET /admin", a.Auth.RequireAdmin(adminDashboardH.Show))
+
+	mux.HandleFunc("GET /admin/blog", a.Auth.RequireAdmin(adminBlogH.List))
+	mux.HandleFunc("GET /admin/blog/new", a.Auth.RequireAdmin(adminBlogH.NewForm))
+	mux.HandleFunc("POST /admin/blog", a.Auth.RequireAdmin(adminBlogH.Create))
+	mux.HandleFunc("GET /admin/blog/{id}/edit", a.Auth.RequireAdmin(adminBlogH.EditForm))
+	mux.HandleFunc("POST /admin/blog/{id}/edit", a.Auth.RequireAdmin(adminBlogH.Update))
+	mux.HandleFunc("POST /admin/blog/{id}/delete", a.Auth.RequireAdmin(adminBlogH.Delete))
+
+	mux.HandleFunc("GET /admin/candidates", a.Auth.RequireAdmin(adminCandidateH.List))
+	mux.HandleFunc("GET /admin/candidates/{id}/edit", a.Auth.RequireAdmin(adminCandidateH.EditForm))
+	mux.HandleFunc("POST /admin/candidates/{id}/edit", a.Auth.RequireAdmin(adminCandidateH.Update))
+
+	mux.HandleFunc("GET /admin/employers", a.Auth.RequireAdmin(adminEmployerH.List))
+	mux.HandleFunc("GET /admin/employers/{id}/edit", a.Auth.RequireAdmin(adminEmployerH.EditForm))
+	mux.HandleFunc("POST /admin/employers/{id}/edit", a.Auth.RequireAdmin(adminEmployerH.Update))
+
+	mux.HandleFunc("GET /admin/jobs", a.Auth.RequireAdmin(adminJobH.List))
+	mux.HandleFunc("GET /admin/jobs/{id}/edit", a.Auth.RequireAdmin(adminJobH.EditForm))
+	mux.HandleFunc("POST /admin/jobs/{id}/edit", a.Auth.RequireAdmin(adminJobH.Update))
+
 	var handler http.Handler = mux
+	handler = a.Auth.LoadAdminSession(handler)
 	handler = a.Auth.LoadSession(handler)
 	handler = httpx.SecurityHeaders(handler)
 	handler = httpx.Recover(handler)

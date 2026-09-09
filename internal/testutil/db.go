@@ -33,7 +33,7 @@ func OpenTestDB(t *testing.T) *pgxpool.Pool {
 		t.Fatalf("migrating test database: %v", err)
 	}
 
-	_, err = pool.Exec(ctx, `TRUNCATE candidate_files, jobs, candidates, employers, sessions, users RESTART IDENTITY CASCADE`)
+	_, err = pool.Exec(ctx, `TRUNCATE candidate_files, jobs, candidates, employers, sessions, users, blog_posts RESTART IDENTITY CASCADE`)
 	if err != nil {
 		t.Fatalf("truncating test database: %v", err)
 	}

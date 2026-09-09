@@ -12,6 +12,7 @@
       <ul class="navbar-nav ms-auto align-items-md-center">
         <li class="nav-item"><a class="nav-link" href="/search?type=candidates">Find Candidates</a></li>
         <li class="nav-item"><a class="nav-link" href="/search?type=jobs">Find Jobs</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog">Blog</a></li>
         {{if .CurrentUser}}
           <li class="nav-item"><a class="nav-link" href="/me">My Profile</a></li>
           {{if eq (printf "%v" .CurrentUser.Role) "employer"}}

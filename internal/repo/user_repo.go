@@ -68,3 +68,8 @@ func (r *UserRepo) UpdateLastLogin(ctx context.Context, id int64) error {
 	_, err := r.pool.Exec(ctx, `UPDATE users SET last_login_at = now() WHERE id = $1`, id)
 	return err
 }
+
+func (r *UserRepo) SetPassword(ctx context.Context, id int64, passwordHash string) error {
+	_, err := r.pool.Exec(ctx, `UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2`, passwordHash, id)
+	return err
+}

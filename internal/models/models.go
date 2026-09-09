@@ -8,6 +8,7 @@ type Role string
 const (
 	RoleCandidate Role = "candidate"
 	RoleEmployer  Role = "employer"
+	RoleAdmin     Role = "admin"
 )
 
 type User struct {
@@ -107,4 +108,17 @@ type Message struct {
 	Body        string
 	CreatedAt   time.Time
 	ReadAt      *time.Time
+}
+
+type BlogPost struct {
+	ID          int64
+	Slug        string
+	Title       string
+	BodyHTML    string
+	BodyText    string
+	AuthorName  string
+	Published   bool
+	PublishedAt *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }

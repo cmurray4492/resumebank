@@ -94,6 +94,27 @@ resume/file upload is capped at 10MB by default — see `MAX_UPLOAD_MB` if you w
 4. Visit the site. Sign up as a candidate and as an employer, post a job, upload a file, and search
    — this exercises the database, file storage, and search all at once. See `README.md`'s "Manual
    verification walkthrough" for the full checklist.
+5. Create your admin account. Install the [Railway CLI](https://docs.railway.com/guides/cli) (`npm
+   i -g @railway/cli`, or see that page for other install methods), run `railway login`, then from
+   this repo's directory:
+
+   ```
+   railway link                          # pick this project and your app service when prompted
+   railway ssh
+   ```
+
+   `railway ssh` opens a shell *inside your already-deployed container* (not your local machine),
+   where the `createadmin` binary from the Dockerfile already exists. Once connected, run:
+
+   ```
+   /app/createadmin -email=you@example.com -password=some-long-password
+   ```
+
+   then `exit` the SSH session. Log in at `https://<your-domain>/admin/login`. Run the same command
+   again any time (via `railway ssh`) to reset that admin's password. (Don't confuse this with
+   `railway run <command>`, which runs a command on *your own machine* with Railway's environment
+   variables injected — useful for other things, but `/app/createadmin` only exists inside the
+   deployed container, not on your laptop.)
 
 If something's wrong, check "Troubleshooting" below before anything else.
 

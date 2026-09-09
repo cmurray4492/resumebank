@@ -95,8 +95,18 @@ func (r *Renderer) getTemplate(page string) (*template.Template, error) {
 }
 
 // Render executes the named page template (e.g. "home.html.tmpl") using
-// "base.html.tmpl" as the entrypoint.
+// "base.html.tmpl" (the public site layout) as the entrypoint.
 func (r *Renderer) Render(w http.ResponseWriter, status int, page string, data any) {
+	r.renderWithBase(w, status, page, "base.html.tmpl", data)
+}
+
+// RenderAdmin is Render's counterpart for admin pages, using
+// "admin_base.html.tmpl" (no public navbar/footer) as the entrypoint.
+func (r *Renderer) RenderAdmin(w http.ResponseWriter, status int, page string, data any) {
+	r.renderWithBase(w, status, page, "admin_base.html.tmpl", data)
+}
+
+func (r *Renderer) renderWithBase(w http.ResponseWriter, status int, page, base string, data any) {
 	tmpl, err := r.getTemplate(page)
 	if err != nil {
 		http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
@@ -104,7 +114,7 @@ func (r *Renderer) Render(w http.ResponseWriter, status int, page string, data a
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
-	if err := tmpl.ExecuteTemplate(w, "base.html.tmpl", data); err != nil {
+	if err := tmpl.ExecuteTemplate(w, base, data); err != nil {
 		// Headers/status are already written; log-style fallback only.
 		fmt.Fprintf(w, "<!-- render error: %v -->", err)
 	}
