@@ -75,3 +75,12 @@ func (s *SessionStore) Delete(ctx context.Context, rawToken string) error {
 	_, err := s.pool.Exec(ctx, `DELETE FROM sessions WHERE token_hash = $1`, hashToken(rawToken))
 	return err
 }
+
+// DeleteAllForUser logs userID out everywhere (all devices, both the public
+// site and, if applicable, the admin panel - they share the sessions
+// table). Called after a password reset so a stolen-but-now-changed
+// password can't keep an old session alive.
+func (s *SessionStore) DeleteAllForUser(ctx context.Context, userID int64) error {
+	_, err := s.pool.Exec(ctx, `DELETE FROM sessions WHERE user_id = $1`, userID)
+	return err
+}

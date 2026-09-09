@@ -20,6 +20,11 @@ type Config struct {
 	OllamaURL      string // base URL of a local Ollama server, for embeddings
 	EmbedModel     string // Ollama embedding model name
 	AutoMigrate    bool   // apply pending DB migrations on server startup (see cmd/server)
+	SMTPHost       string // empty = no SMTP configured; falls back to mailer.LogMailer
+	SMTPPort       string
+	SMTPUsername   string
+	SMTPPassword   string
+	SMTPFrom       string
 }
 
 func Load() (*Config, error) {
@@ -35,6 +40,11 @@ func Load() (*Config, error) {
 	cfg.OllamaURL = strings.TrimRight(getEnv("OLLAMA_URL", "http://localhost:11434"), "/")
 	cfg.EmbedModel = getEnv("OLLAMA_EMBED_MODEL", "nomic-embed-text")
 	cfg.AutoMigrate = getEnvBool("AUTO_MIGRATE", false)
+	cfg.SMTPHost = os.Getenv("SMTP_HOST")
+	cfg.SMTPPort = getEnv("SMTP_PORT", "587")
+	cfg.SMTPUsername = os.Getenv("SMTP_USERNAME")
+	cfg.SMTPPassword = os.Getenv("SMTP_PASSWORD")
+	cfg.SMTPFrom = getEnv("SMTP_FROM", "resumebank.biz <no-reply@resumebank.biz>")
 
 	if cfg.DatabaseURL == "" {
 		return nil, fmt.Errorf("DATABASE_URL is required")

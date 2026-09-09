@@ -27,6 +27,7 @@ func TestRenderSmoke_PublicPagesRenderWithoutError(t *testing.T) {
 		"/", "/about", "/terms", "/search", "/login",
 		"/signup/candidate", "/signup/employer",
 		"/blog", "/admin/login",
+		"/forgot-password", "/reset-password/some-token",
 	}
 
 	for _, path := range paths {

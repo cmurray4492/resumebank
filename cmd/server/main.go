@@ -44,6 +44,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("app init error: %v", err)
 	}
+	if cfg.Env == "production" && cfg.SMTPHost == "" {
+		log.Println("WARNING: SMTP_HOST is not set in production - password reset emails will only be logged, not delivered")
+	}
 
 	initCtx, initCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	if err := a.RefreshSitemap(initCtx); err != nil {

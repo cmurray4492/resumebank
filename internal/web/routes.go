@@ -30,6 +30,7 @@ func NewRouter(a *app.App) http.Handler {
 	adminCandidateH := NewAdminCandidateHandlers(a)
 	adminEmployerH := NewAdminEmployerHandlers(a)
 	adminJobH := NewAdminJobHandlers(a)
+	resetH := NewPasswordResetHandlers(a)
 
 	mux.HandleFunc("GET /{$}", home.Show)
 	mux.HandleFunc("GET /healthz", home.Healthz)
@@ -47,6 +48,12 @@ func NewRouter(a *app.App) http.Handler {
 	mux.HandleFunc("GET /login", authH.LoginForm)
 	mux.HandleFunc("POST /login", authH.Login)
 	mux.HandleFunc("POST /logout", authH.Logout)
+
+	// Shared by candidates, employers, and admins - see password_reset_handlers.go.
+	mux.HandleFunc("GET /forgot-password", resetH.ForgotPasswordForm)
+	mux.HandleFunc("POST /forgot-password", resetH.ForgotPassword)
+	mux.HandleFunc("GET /reset-password/{token}", resetH.ResetPasswordForm)
+	mux.HandleFunc("POST /reset-password/{token}", resetH.ResetPassword)
 
 	mux.HandleFunc("GET /candidates/{slug}", candidateH.Show)
 	mux.HandleFunc("GET /candidates/{slug}/edit", a.Auth.RequireRole(models.RoleCandidate, candidateH.EditForm))

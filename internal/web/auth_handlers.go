@@ -210,8 +210,13 @@ func (h *AuthHandlers) rerenderEmployerSignup(w http.ResponseWriter, r *http.Req
 	h.App.Renderer.Render(w, http.StatusUnprocessableEntity, "signup_employer.html.tmpl", pd)
 }
 
+type loginView struct {
+	PasswordWasReset bool
+}
+
 func (h *AuthHandlers) LoginForm(w http.ResponseWriter, r *http.Request) {
-	pd := newPageData(h.App, w, r, "Log In", "Log in to your resumebank.biz account.", nil)
+	view := loginView{PasswordWasReset: r.URL.Query().Get("reset") == "success"}
+	pd := newPageData(h.App, w, r, "Log In", "Log in to your resumebank.biz account.", view)
 	h.App.Renderer.Render(w, http.StatusOK, "login.html.tmpl", pd)
 }
 
@@ -229,7 +234,7 @@ func (h *AuthHandlers) Login(w http.ResponseWriter, r *http.Request) {
 
 	fail := func() {
 		errs := validate.FieldErrors{"email": "Invalid email or password."}
-		pd := newPageData(h.App, w, r, "Log In", "Log in to your resumebank.biz account.", nil)
+		pd := newPageData(h.App, w, r, "Log In", "Log in to your resumebank.biz account.", loginView{})
 		pd.Errors = errs
 		h.App.Renderer.Render(w, http.StatusUnprocessableEntity, "login.html.tmpl", pd)
 	}

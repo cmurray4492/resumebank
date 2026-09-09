@@ -64,10 +64,28 @@ depends on what Railway named your database service.
 | `ENV` | `production` | |
 | `COOKIE_SECURE` | `true` | Required in production — Railway serves your app over HTTPS |
 | `AUTO_MIGRATE` | `true` | Runs pending database migrations automatically on each deploy, so you never need a separate migration step |
-| `BASE_URL` | `https://${{RAILWAY_PUBLIC_DOMAIN}}` | Used to build `sitemap.xml`/`robots.txt` links correctly |
+| `BASE_URL` | `https://${{RAILWAY_PUBLIC_DOMAIN}}` | Used to build `sitemap.xml`/`robots.txt` links and password reset links correctly |
 | `UPLOAD_DIR` | `/app/data` | See Step 4 — this must match the volume mount path |
 
 Railway automatically provides `PORT` — you don't need to set it yourself.
+
+**Password reset email.** Without any `SMTP_*` variables set, "forgot password" still works, but the
+reset link only gets written to your app's deploy logs (Railway dashboard → your app service →
+Deployments → View Logs) instead of being emailed — fine for testing, not for real users. To send
+real emails, add:
+
+| Variable | Value |
+|---|---|
+| `SMTP_HOST` | your provider's SMTP hostname |
+| `SMTP_PORT` | usually `587` (the default if you don't set this) |
+| `SMTP_USERNAME` | your SMTP username |
+| `SMTP_PASSWORD` | your SMTP password (or app-specific password) |
+| `SMTP_FROM` | e.g. `resumebank.biz <no-reply@yourdomain.com>` |
+
+Any provider with an SMTP endpoint works — SendGrid, Mailgun, Postmark, AWS SES, or even a Gmail
+account with an [App Password](https://myaccount.google.com/apppasswords) (`smtp.gmail.com`, port
+`587`, your Gmail address as both the username and the "from" address) if you just want something
+that works quickly for a small project.
 
 ## Step 4 — Add a persistent volume for uploaded files
 
@@ -183,6 +201,12 @@ nothing extra to run — `AUTO_MIGRATE=true` handles any new database migrations
   domain once this is set correctly.
 - **Uploaded files disappear after a redeploy.** You're missing the volume from Step 4, or
   `UPLOAD_DIR` doesn't match the mount path you set.
+- **"Forgot password" says it sent an email, but nothing arrives.** If you haven't set the `SMTP_*`
+  variables (see Step 3), this is expected — check your deploy logs for the reset link instead. If
+  you *have* set them, double-check the username/password and that your provider's SMTP host/port
+  are correct; a bad password or wrong host shows up as an error in the deploy logs when the reset
+  email fails to send (the user never sees this — it fails silently on their end, by design, so a
+  broken email address doesn't leak which emails have accounts).
 - **The site works but matching always says "temporarily unavailable."** Either you skipped Step 6
   on purpose (fine), or your `OLLAMA_URL` doesn't match your Ollama service's internal address, or
   the `nomic-embed-text` model hasn't finished downloading yet — check the Ollama service's logs.

@@ -4,8 +4,9 @@ A recruiting site connecting candidates and employers, built in Go. See `@SPEC.m
 project brief. Every feature in the spec is implemented: accounts and SEO-formatted profiles, job
 postings, file uploads, search, employer &lt;-&gt; candidate messaging, candidate-only job voting,
 sitemap.xml + hourly search-index rebuild, and the embeddings/RAG candidate&lt;-&gt;job matching
-features. Beyond the original spec, there's also a blog (`/blog`) and an admin panel (`/admin`) for
-managing blog posts and editing any candidate/employer/job.
+features. Beyond the original spec, there's also a blog (`/blog`), an admin panel (`/admin`) for
+managing blog posts and editing any candidate/employer/job, and password reset (`/forgot-password`)
+shared by candidates, employers, and admins alike.
 
 This file covers running the app **locally**. To deploy it to production, see
 **[DEPLOYMENT.md](DEPLOYMENT.md)** — a from-scratch walkthrough for deploying to
@@ -35,6 +36,8 @@ This file covers running the app **locally**. To deploy it to production, see
   (`ollama pull nomic-embed-text`), for the candidate/job matching features. **This is optional** —
   if Ollama isn't running, everything else in the app works normally; the matching pages just show a
   "temporarily unavailable" message instead of results (see "Notable Phase 3b decisions" below).
+- **Nothing** for password reset locally — an SMTP server is optional (see below); without one,
+  reset emails are just logged to the server console, which is all you need for local testing.
 
 ## Running locally
 
@@ -53,12 +56,18 @@ This file covers running the app **locally**. To deploy it to production, see
    OLLAMA_EMBED_MODEL=nomic-embed-text
    ```
 
-   `BASE_URL` is the absolute origin used to build `sitemap.xml`/`robots.txt` URLs; it defaults to
-   `http://localhost:$PORT` if unset, but set it to your real domain in production. `OLLAMA_URL` and
-   `OLLAMA_EMBED_MODEL` both have the defaults shown above if unset. There's also `AUTO_MIGRATE`
-   (default `false`), which makes `cmd/server` apply pending migrations on startup instead of you
-   running `cmd/migrate` separately — leave it off locally (step 2 below covers migrations), it's
-   meant for deployment (see `DEPLOYMENT.md`).
+   `BASE_URL` is the absolute origin used to build `sitemap.xml`/`robots.txt` URLs (and password
+   reset links); it defaults to `http://localhost:$PORT` if unset, but set it to your real domain in
+   production. `OLLAMA_URL` and `OLLAMA_EMBED_MODEL` both have the defaults shown above if unset.
+   There's also `AUTO_MIGRATE` (default `false`), which makes `cmd/server` apply pending migrations
+   on startup instead of you running `cmd/migrate` separately — leave it off locally (step 2 below
+   covers migrations), it's meant for deployment (see `DEPLOYMENT.md`).
+
+   For password reset, `SMTP_HOST` is optional locally (unset = reset links are logged to the
+   console instead of emailed, which is all you need to test the flow). If you do want real email
+   locally, also set `SMTP_PORT` (default `587`), `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM`
+   (default `resumebank.biz <no-reply@resumebank.biz>`) — any provider with an SMTP endpoint works
+   (Gmail, SendGrid, Mailgun, Postmark, AWS SES, ...).
 
 2. Apply database migrations:
 
@@ -118,6 +127,12 @@ This file covers running the app **locally**. To deploy it to production, see
   design). Log out of admin and confirm `/admin` redirects to `/admin/login`. While logged in as a
   regular candidate or employer, confirm visiting `/admin` also redirects to `/admin/login` — a
   public-site session must never grant admin access.
+- Go to `/forgot-password`, submit a candidate's email, and (without SMTP configured) find the reset
+  link in the server console output; submit an email that has no account and confirm the response
+  looks identical either way. Follow the link, set a new password, confirm you land on `/login` with
+  a "password has been reset" banner, log in with the new password, and confirm the old password no
+  longer works. Try reusing the same reset link a second time and confirm it's rejected as invalid.
+  Repeat for an employer and an admin account — the admin flow redirects to `/admin/login` instead.
 
 ## Running tests
 
@@ -241,6 +256,33 @@ These two features were added on top of the original spec at the user's request,
   title, rich-text body (via the same Quill/sanitize pipeline as resumes and job descriptions),
   author name, and a published/draft flag. `published_at` is set the first time a post is published
   and left alone on later edits, so it reflects the original publish date, not the last-edited date.
+
+## Notable password reset decisions
+
+Also added on top of the original spec, at the user's request ("password reset for all levels").
+
+- **One shared flow for candidates, employers, and admins** — a reset token proves control of an
+  email address regardless of role, so there's a single `/forgot-password` → email link →
+  `/reset-password/{token}` flow rather than three separate ones; the only role-specific behavior is
+  which login page you land on afterward (`/login` vs `/admin/login`), decided by the account's
+  actual role, not by which form you started from. See `internal/web/password_reset_handlers.go`.
+- **Email is vendor-neutral SMTP** (`internal/mailer`, Go's stdlib `net/smtp` — no new dependency,
+  no vendor SDK/API-key format to commit to), configured via `SMTP_HOST`/`PORT`/`USERNAME`/
+  `PASSWORD`/`FROM`. If `SMTP_HOST` is unset, a `LogMailer` fallback logs the email instead of
+  sending it — deliberately fine for local dev, but `cmd/server` logs a startup warning if this
+  happens with `ENV=production`, since it means reset emails silently won't be delivered.
+- **Never reveals whether an email has an account.** `/forgot-password` shows the identical "if that
+  email is registered..." response either way, and only actually sends an email/creates a token when
+  the address matches a real account — otherwise a "forgot password" form becomes a way to discover
+  who's registered.
+- **Tokens are single-use and short-lived** (1 hour, vs. 30 days for a login session), consumed
+  atomically via one `UPDATE ... WHERE used_at IS NULL RETURNING`, so two concurrent requests with
+  the same token can't both succeed. A successful reset also deletes *all* of that user's existing
+  sessions (`SessionStore.DeleteAllForUser`) — both public-site and admin-panel sessions share the
+  same table — so a stolen session can't outlive a password change.
+- **Reset email delivery is fire-and-forget**, same pattern as embedding computation: the HTTP
+  response never waits on token creation or SMTP, both of which happen in a background goroutine
+  with their own timeout (`App.SendPasswordResetEmail`).
 
 ## Notable deployment decisions
 

@@ -22,7 +22,8 @@ func (h *AdminAuthHandlers) LoginForm(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/admin", http.StatusSeeOther)
 		return
 	}
-	pd := newAdminPageData(h.App, w, r, "Admin Login", nil)
+	view := loginView{PasswordWasReset: r.URL.Query().Get("reset") == "success"}
+	pd := newAdminPageData(h.App, w, r, "Admin Login", view)
 	h.App.Renderer.RenderAdmin(w, http.StatusOK, "admin_login.html.tmpl", pd)
 }
 
@@ -40,7 +41,7 @@ func (h *AdminAuthHandlers) Login(w http.ResponseWriter, r *http.Request) {
 
 	fail := func() {
 		errs := validate.FieldErrors{"email": "Invalid email or password."}
-		pd := newAdminPageData(h.App, w, r, "Admin Login", nil)
+		pd := newAdminPageData(h.App, w, r, "Admin Login", loginView{})
 		pd.Errors = errs
 		h.App.Renderer.RenderAdmin(w, http.StatusUnprocessableEntity, "admin_login.html.tmpl", pd)
 	}

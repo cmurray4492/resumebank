@@ -53,3 +53,35 @@ func TestSessionStore_LookupUnknownToken(t *testing.T) {
 		t.Errorf("expected ErrSessionNotFound, got %v", err)
 	}
 }
+
+func TestSessionStore_DeleteAllForUser(t *testing.T) {
+	pool := testutil.OpenTestDB(t)
+	users := repo.NewUserRepo(pool)
+	sessions := auth.NewSessionStore(pool)
+	ctx := context.Background()
+
+	u, err := users.Create(ctx, "jane@example.com", "hash", models.RoleCandidate)
+	if err != nil {
+		t.Fatalf("creating user: %v", err)
+	}
+
+	tokenA, err := sessions.Create(ctx, u.ID)
+	if err != nil {
+		t.Fatalf("Create session A: %v", err)
+	}
+	tokenB, err := sessions.Create(ctx, u.ID)
+	if err != nil {
+		t.Fatalf("Create session B: %v", err)
+	}
+
+	if err := sessions.DeleteAllForUser(ctx, u.ID); err != nil {
+		t.Fatalf("DeleteAllForUser: %v", err)
+	}
+
+	if _, err := sessions.Lookup(ctx, tokenA); err != auth.ErrSessionNotFound {
+		t.Errorf("expected session A to be gone, got %v", err)
+	}
+	if _, err := sessions.Lookup(ctx, tokenB); err != auth.ErrSessionNotFound {
+		t.Errorf("expected session B to be gone, got %v", err)
+	}
+}
