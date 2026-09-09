@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/mail"
 	"net/smtp"
 )
 
@@ -36,7 +37,7 @@ func (m *SMTPMailer) Send(ctx context.Context, to, subject, body string) error {
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- smtp.SendMail(addr, auth, m.From, []string{to}, []byte(msg))
+		errCh <- smtp.SendMail(addr, auth, envelopeAddress(m.From), []string{to}, []byte(msg))
 	}()
 	select {
 	case err := <-errCh:
@@ -44,6 +45,20 @@ func (m *SMTPMailer) Send(ctx context.Context, to, subject, body string) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+}
+
+// envelopeAddress extracts the bare email address from a
+// "Display Name <addr>" (or plain "addr") string, for use as the SMTP
+// envelope's "MAIL FROM:<...>" command - unlike a message's "From:" header,
+// the envelope address must be bare, or servers reject it as a syntax
+// error. Falls back to the input unchanged if it doesn't parse (better to
+// let the SMTP server reject a genuinely malformed address than to send
+// nothing).
+func envelopeAddress(from string) string {
+	if parsed, err := mail.ParseAddress(from); err == nil {
+		return parsed.Address
+	}
+	return from
 }
 
 // LogMailer is the fallback used when SMTP isn't configured (e.g. local
