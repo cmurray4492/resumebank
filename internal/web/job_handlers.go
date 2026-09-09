@@ -189,10 +189,12 @@ func (h *JobHandlers) Create(w http.ResponseWriter, r *http.Request) {
 		DescriptionHTML: descriptionHTML,
 		DescriptionText: sanitize.PlainText(descriptionHTML),
 	}
-	if _, err := h.App.Jobs.Create(r.Context(), job); err != nil {
+	created, err := h.App.Jobs.Create(r.Context(), job)
+	if err != nil {
 		httpServerError(w, err)
 		return
 	}
+	h.App.TriggerJobEmbedding(created.ID, created.DescriptionText)
 	http.Redirect(w, r, "/jobs/"+job.Slug, http.StatusSeeOther)
 }
 
@@ -233,17 +235,24 @@ func (h *JobHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	newDescriptionText := sanitize.PlainText(descriptionHTML)
+	descriptionChanged := newDescriptionText != job.DescriptionText
+
 	job.Title = title
 	job.Location = strings.TrimSpace(r.FormValue("location"))
 	job.JobNumber = strings.TrimSpace(r.FormValue("job_number"))
 	job.SalaryMin = optionalInt(strings.TrimSpace(r.FormValue("salary_min")))
 	job.SalaryMax = optionalInt(strings.TrimSpace(r.FormValue("salary_max")))
 	job.DescriptionHTML = descriptionHTML
-	job.DescriptionText = sanitize.PlainText(descriptionHTML)
+	job.DescriptionText = newDescriptionText
 
-	if _, err := h.App.Jobs.Update(r.Context(), job); err != nil {
+	updated, err := h.App.Jobs.Update(r.Context(), job)
+	if err != nil {
 		httpServerError(w, err)
 		return
+	}
+	if descriptionChanged {
+		h.App.TriggerJobEmbedding(updated.ID, updated.DescriptionText)
 	}
 	http.Redirect(w, r, "/jobs/"+job.Slug, http.StatusSeeOther)
 }

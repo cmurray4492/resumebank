@@ -99,13 +99,15 @@ func (h *AuthHandlers) SignupCandidate(w http.ResponseWriter, r *http.Request) {
 		ResumeHTML:  resumeHTML,
 		ResumeText:  sanitize.PlainText(resumeHTML),
 	}
-	if _, err := h.App.Candidates.Create(r.Context(), candidate); err != nil {
+	created, err := h.App.Candidates.Create(r.Context(), candidate)
+	if err != nil {
 		// Compensate for the orphaned user row; Phase 1 doesn't wrap this in
 		// a DB transaction since repos operate on the shared pool directly.
 		log.Printf("candidate creation failed after user creation, user id=%d: %v", user.ID, err)
 		httpServerError(w, err)
 		return
 	}
+	h.App.TriggerCandidateEmbedding(created.ID, created.ResumeText)
 
 	h.startSession(w, r, user.ID)
 	http.Redirect(w, r, "/candidates/"+candidate.Slug, http.StatusSeeOther)

@@ -17,6 +17,8 @@ type Config struct {
 	UploadDir      string
 	MaxUploadBytes int64
 	BaseURL        string // absolute origin (no trailing slash), used to build sitemap URLs
+	OllamaURL      string // base URL of a local Ollama server, for embeddings
+	EmbedModel     string // Ollama embedding model name
 }
 
 func Load() (*Config, error) {
@@ -29,6 +31,8 @@ func Load() (*Config, error) {
 		UploadDir:     getEnv("UPLOAD_DIR", "./uploads"),
 	}
 	cfg.BaseURL = strings.TrimRight(getEnv("BASE_URL", "http://localhost:"+cfg.Port), "/")
+	cfg.OllamaURL = strings.TrimRight(getEnv("OLLAMA_URL", "http://localhost:11434"), "/")
+	cfg.EmbedModel = getEnv("OLLAMA_EMBED_MODEL", "nomic-embed-text")
 
 	if cfg.DatabaseURL == "" {
 		return nil, fmt.Errorf("DATABASE_URL is required")

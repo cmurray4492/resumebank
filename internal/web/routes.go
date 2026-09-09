@@ -21,6 +21,7 @@ func NewRouter(a *app.App) http.Handler {
 	fileH := NewFileHandlers(a)
 	messageH := NewMessageHandlers(a)
 	sitemapH := NewSitemapHandlers(a)
+	matchH := NewMatchHandlers(a)
 
 	mux.HandleFunc("GET /{$}", home.Show)
 	mux.HandleFunc("GET /healthz", home.Healthz)
@@ -65,8 +66,10 @@ func NewRouter(a *app.App) http.Handler {
 	mux.HandleFunc("GET /sitemap.xml", sitemapH.Sitemap)
 	mux.HandleFunc("GET /robots.txt", sitemapH.Robots)
 
-	// Phase 3 (not yet implemented): the two embeddings/RAG matching
-	// endpoints (POST /match/candidates, /match/jobs).
+	mux.HandleFunc("GET /match/candidates", a.Auth.RequireRole(models.RoleEmployer, matchH.CandidateMatchForm))
+	mux.HandleFunc("POST /match/candidates", a.Auth.RequireRole(models.RoleEmployer, matchH.MatchCandidates))
+	mux.HandleFunc("GET /match/jobs", a.Auth.RequireRole(models.RoleCandidate, matchH.JobMatchForm))
+	mux.HandleFunc("POST /match/jobs", a.Auth.RequireRole(models.RoleCandidate, matchH.MatchJobs))
 
 	var handler http.Handler = mux
 	handler = a.Auth.LoadSession(handler)

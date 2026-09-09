@@ -1,0 +1,46 @@
+{{define "content"}}
+<h1 class="h3 mb-3">Match Jobs</h1>
+
+<div class="alert alert-warning">
+  This feature is in development and will get better with time as more jobs are posted. Results are
+  based on semantic similarity between your resume below and active job descriptions, computed by a
+  local AI model &mdash; they're suggestions, not guarantees.
+</div>
+
+<form method="post" action="/match/jobs" class="mb-4">
+  <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+  <div class="mb-3">
+    <label class="form-label" for="resume">Your Resume</label>
+    <textarea class="form-control {{if index .Errors "resume"}}is-invalid{{end}}"
+      id="resume" name="resume" rows="8" required>{{.Data.Resume}}</textarea>
+    {{with index .Errors "resume"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+  </div>
+  <button type="submit" class="btn btn-primary">Find Matching Jobs</button>
+</form>
+
+{{if .Data.Searched}}
+  {{if .Data.Unavailable}}
+    <div class="alert alert-secondary">
+      Matching is temporarily unavailable (the local AI model isn't reachable right now). Please try
+      again later.
+    </div>
+  {{else if .Data.Results}}
+    <h2 class="h5">Top Matches</h2>
+    <ul class="list-group" style="max-width: 700px;">
+      {{range .Data.Results}}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <a href="/jobs/{{.Slug}}">{{.Title}}</a>
+            <span class="text-muted"> at <a href="/employers/{{.EmployerSlug}}">{{.CompanyName}}</a></span>
+          </div>
+          <span class="badge bg-primary rounded-pill">{{matchPercent .Similarity}}</span>
+        </li>
+      {{end}}
+    </ul>
+  {{else}}
+    <p class="text-muted">No matching jobs yet. New job postings become matchable shortly after they're created.</p>
+  {{end}}
+{{end}}
+{{end}}
+
+{{define "scripts"}}{{end}}

@@ -78,6 +78,67 @@ func (r *JobRepo) SlugExists(ctx context.Context, slug string) (bool, error) {
 	return exists, err
 }
 
+// SetEmbedding stores a pgvector literal (see embeddings.FormatVector) as
+// the job's description embedding.
+func (r *JobRepo) SetEmbedding(ctx context.Context, id int64, vector string) error {
+	_, err := r.pool.Exec(ctx, `UPDATE jobs SET embedding = $1::vector WHERE id = $2`, vector, id)
+	return err
+}
+
+// MissingEmbeddings returns up to limit jobs whose embedding hasn't been
+// computed yet, for the background backfill sweep.
+func (r *JobRepo) MissingEmbeddings(ctx context.Context, limit int) ([]EmbeddingTarget, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id, description_text FROM jobs WHERE embedding IS NULL LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var targets []EmbeddingTarget
+	for rows.Next() {
+		var t EmbeddingTarget
+		if err := rows.Scan(&t.ID, &t.Text); err != nil {
+			return nil, err
+		}
+		targets = append(targets, t)
+	}
+	return targets, rows.Err()
+}
+
+type JobMatch struct {
+	Slug         string
+	Title        string
+	CompanyName  string
+	EmployerSlug string
+	Similarity   float64
+}
+
+// MatchByEmbedding returns the jobs most similar to queryVector (see
+// embeddings.FormatVector), most similar first.
+func (r *JobRepo) MatchByEmbedding(ctx context.Context, queryVector string, limit int) ([]JobMatch, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT j.slug, j.title, e.company_name, e.slug, 1 - (j.embedding <=> $1::vector) AS similarity
+		FROM jobs j JOIN employers e ON e.id = j.employer_id
+		WHERE j.embedding IS NOT NULL
+		ORDER BY j.embedding <=> $1::vector
+		LIMIT $2`, queryVector, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var matches []JobMatch
+	for rows.Next() {
+		var m JobMatch
+		if err := rows.Scan(&m.Slug, &m.Title, &m.CompanyName, &m.EmployerSlug, &m.Similarity); err != nil {
+			return nil, err
+		}
+		matches = append(matches, m)
+	}
+	return matches, rows.Err()
+}
+
 // ListSlugs returns every job's slug and last-updated time, for building
 // the sitemap.
 func (r *JobRepo) ListSlugs(ctx context.Context) ([]SitemapEntry, error) {

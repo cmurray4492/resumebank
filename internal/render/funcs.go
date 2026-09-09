@@ -18,6 +18,16 @@ func FuncMap() template.FuncMap {
 			}
 			return *p
 		},
+		"matchPercent": func(similarity float64) string {
+			pct := similarity * 100
+			if pct < 0 {
+				pct = 0
+			}
+			if pct > 100 {
+				pct = 100
+			}
+			return fmt.Sprintf("%.0f%%", pct)
+		},
 		"formatSalary": func(min, max *int) string {
 			switch {
 			case min != nil && max != nil:

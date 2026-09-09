@@ -45,10 +45,20 @@ func main() {
 	}
 	initCancel()
 
+	// Embeddings backfill gets its own longer, independent timeout: a slow
+	// or unreachable Ollama server here must never delay server startup or
+	// be conflated with the sitemap/search-index refreshes above.
+	embedCtx, embedCancel := context.WithTimeout(context.Background(), 60*time.Second)
+	if err := a.RefreshMissingEmbeddings(embedCtx); err != nil {
+		log.Printf("initial embeddings backfill failed: %v", err)
+	}
+	embedCancel()
+
 	bgCtx, stopBackground := context.WithCancel(context.Background())
 	defer stopBackground()
 	go background.RunEvery(bgCtx, 24*time.Hour, "sitemap refresh", a.RefreshSitemap)
 	go background.RunEvery(bgCtx, time.Hour, "search index refresh", a.RefreshSearchIndex)
+	go background.RunEvery(bgCtx, 5*time.Minute, "embeddings backfill", a.RefreshMissingEmbeddings)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

@@ -1,0 +1,46 @@
+{{define "content"}}
+<h1 class="h3 mb-3">Match Candidates</h1>
+
+<div class="alert alert-warning">
+  This feature is in development and will get better with time as more candidate profiles are added.
+  Results are based on semantic similarity between the job description below and candidates' resumes,
+  computed by a local AI model &mdash; they're suggestions, not guarantees.
+</div>
+
+<form method="post" action="/match/candidates" class="mb-4">
+  <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+  <div class="mb-3">
+    <label class="form-label" for="job_description">Job Description</label>
+    <textarea class="form-control {{if index .Errors "job_description"}}is-invalid{{end}}"
+      id="job_description" name="job_description" rows="8" required>{{.Data.JobDescription}}</textarea>
+    {{with index .Errors "job_description"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+  </div>
+  <button type="submit" class="btn btn-primary">Find Matching Candidates</button>
+</form>
+
+{{if .Data.Searched}}
+  {{if .Data.Unavailable}}
+    <div class="alert alert-secondary">
+      Matching is temporarily unavailable (the local AI model isn't reachable right now). Please try
+      again later.
+    </div>
+  {{else if .Data.Results}}
+    <h2 class="h5">Top Matches</h2>
+    <ul class="list-group" style="max-width: 700px;">
+      {{range .Data.Results}}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <a href="/candidates/{{.Slug}}">{{.Name}}</a>
+            {{if .Title}}<span class="text-muted"> &mdash; {{.Title}}</span>{{end}}
+          </div>
+          <span class="badge bg-primary rounded-pill">{{matchPercent .Similarity}}</span>
+        </li>
+      {{end}}
+    </ul>
+  {{else}}
+    <p class="text-muted">No matching candidates yet. Candidates need a resume on file to be matched, and the match index updates shortly after each save.</p>
+  {{end}}
+{{end}}
+{{end}}
+
+{{define "scripts"}}{{end}}

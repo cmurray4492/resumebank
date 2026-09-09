@@ -14,6 +14,11 @@
         <li class="nav-item"><a class="nav-link" href="/search?type=jobs">Find Jobs</a></li>
         {{if .CurrentUser}}
           <li class="nav-item"><a class="nav-link" href="/me">My Profile</a></li>
+          {{if eq (printf "%v" .CurrentUser.Role) "employer"}}
+            <li class="nav-item"><a class="nav-link" href="/match/candidates">Match Candidates</a></li>
+          {{else}}
+            <li class="nav-item"><a class="nav-link" href="/match/jobs">Match Jobs</a></li>
+          {{end}}
           <li class="nav-item">
             <a class="nav-link" href="/messages">
               Messages

@@ -3,13 +3,15 @@
 A recruiting site connecting candidates and employers, built in Go. See `@SPEC.md` for the original
 project brief. This repo is being built in phases. **Phase 1** (accounts, profiles, job postings,
 file uploads, and search), **Phase 2** (employer &lt;-&gt; candidate messaging and candidate-only job
-voting), and **Phase 3a** (sitemap.xml and the hourly search-index rebuild) are done. The
-embeddings/RAG "matching" features are planned for a later phase (see "What's not built yet" below).
+voting), **Phase 3a** (sitemap.xml and the hourly search-index rebuild), and **Phase 3b** (the
+embeddings/RAG candidate&lt;-&gt;job matching features) are done. Novice-friendly deployment docs are
+the only thing left (see "What's not built yet" below).
 
 ## Stack
 
 - Go (standard library `net/http` + `html/template`), Bootstrap 5, Quill.js rich-text editor
-- PostgreSQL with the `pgvector` extension (enabled now for a future embeddings phase)
+- PostgreSQL with the `pgvector` extension, for candidate/job embeddings
+- Ollama (local) running `nomic-embed-text` for the candidate/job matching features
 - `jackc/pgx/v5` for database access, `bluemonday` for HTML sanitization, `bcrypt` for passwords
 
 ## Prerequisites
@@ -25,6 +27,11 @@ embeddings/RAG "matching" features are planned for a later phase (see "What's no
   (If you don't want to use Docker, install Postgres normally and additionally install the
   [pgvector](https://github.com/pgvector/pgvector) extension for your Postgres version.)
 
+- [Ollama](https://ollama.com) running locally, with the `nomic-embed-text` model pulled
+  (`ollama pull nomic-embed-text`), for the candidate/job matching features. **This is optional** —
+  if Ollama isn't running, everything else in the app works normally; the matching pages just show a
+  "temporarily unavailable" message instead of results (see "Notable Phase 3b decisions" below).
+
 ## Running locally
 
 1. Set environment variables (a plain shell `export`/PowerShell `$env:` or a `.env`-loading tool of
@@ -38,10 +45,13 @@ embeddings/RAG "matching" features are planned for a later phase (see "What's no
    COOKIE_SECURE=false
    UPLOAD_DIR=./uploads
    BASE_URL=http://localhost:8080
+   OLLAMA_URL=http://localhost:11434
+   OLLAMA_EMBED_MODEL=nomic-embed-text
    ```
 
    `BASE_URL` is the absolute origin used to build `sitemap.xml`/`robots.txt` URLs; it defaults to
-   `http://localhost:$PORT` if unset, but set it to your real domain in production.
+   `http://localhost:$PORT` if unset, but set it to your real domain in production. `OLLAMA_URL` and
+   `OLLAMA_EMBED_MODEL` both have the defaults shown above if unset.
 
 2. Apply database migrations:
 
@@ -77,6 +87,11 @@ embeddings/RAG "matching" features are planned for a later phase (see "What's no
   appears with a `<lastmod>` date. Sign up a new candidate, confirm it's immediately findable via
   `/search` (live), and confirm `SELECT * FROM search_index` in psql does *not* yet include it until
   the next hourly refresh (or run `REFRESH MATERIALIZED VIEW CONCURRENTLY search_index;` manually).
+- With Ollama running, log in as an employer, go to "Match Candidates" in the nav, paste in a job
+  description, and confirm it returns candidates ranked by relevance with a similarity percentage.
+  Log in as a candidate, go to "Match Jobs", paste in a resume, and confirm the same in the other
+  direction. Then stop Ollama and confirm both pages show "temporarily unavailable" instead of an
+  error, and that signing up or editing a profile/job still works instantly either way.
 
 ## Running tests
 
@@ -149,9 +164,30 @@ gofmt -l .   # should print nothing
 - `robots.txt` was added alongside the sitemap (not explicitly requested by the spec) since it's the
   standard way search engines discover a sitemap, and directly serves the spec's SEO requirement.
 
-## What's not built yet (planned for later phases)
+## Notable Phase 3b decisions
 
-- The two embeddings/RAG "matching" features (employer pastes a JD to find candidates; candidate
-  pastes a resume to find jobs), which will use Ollama running locally with an embedding model
-  (e.g. `nomic-embed-text`) against the `pgvector` column already enabled in the schema
+- **Embedding computation is async, best-effort, and self-healing.** After a candidate signs up (or
+  changes their resume) or a job is posted (or its description changes), the server kicks off
+  embedding computation in a background goroutine with its own timeout — the HTTP response is never
+  delayed by it, and a failure (most likely Ollama not running) is just logged, never shown to the
+  user. A background sweep (`internal/app.RefreshMissingEmbeddings`, every 5 minutes, plus once at
+  startup) finds any candidate/job still missing an embedding and retries it. This means the
+  matching feature degrades gracefully to "temporarily unavailable" instead of breaking anything
+  else in the app when Ollama isn't running — appropriate for a feature the spec itself calls
+  "in development."
+- **`nomic-embed-text` is asymmetric**: text being indexed (a resume, a job description) is embedded
+  with a `"search_document: "` prefix, and text being searched with (a pasted JD or resume at match
+  time) gets a `"search_query: "` prefix instead — mixing these up measurably hurts retrieval
+  quality. See `internal/embeddings/client.go`.
+- **No ANN index (ivfflat/hnsw) on the embedding columns yet.** A brute-force
+  `ORDER BY embedding <=> $1` scan is fast enough at the row counts this app has today, and those
+  index types need representative data present to choose good parameters. Add one if the corpus
+  grows large enough for it to matter.
+- Match results show a similarity percentage (cosine similarity, since nomic-embed-text embeddings
+  are normalized) but no rank-independent quality threshold; a corpus with only weakly-related
+  entries will still return its "closest" results rather than an empty list, which is the intended
+  interpretation of "will get better with time" as more profiles/jobs are added.
+
+## What's not built yet
+
 - Deployment configuration and novice-friendly deployment instructions (target: Railway)

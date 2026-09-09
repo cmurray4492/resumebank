@@ -2,14 +2,19 @@ package app_test
 
 import (
 	"context"
+	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"resumebank/internal/app"
 	"resumebank/internal/config"
+	"resumebank/internal/embeddings"
 	"resumebank/internal/models"
 	"resumebank/internal/testutil"
 )
+
+const testOllamaURL = "http://localhost:11434"
 
 func newTestApp(t *testing.T) *app.App {
 	t.Helper()
@@ -20,12 +25,27 @@ func newTestApp(t *testing.T) *app.App {
 		UploadDir:      t.TempDir(),
 		MaxUploadBytes: 10 << 20,
 		BaseURL:        "https://resumebank.example",
+		OllamaURL:      testOllamaURL,
+		EmbedModel:     "nomic-embed-text",
 	}
 	a, err := app.New(cfg, pool)
 	if err != nil {
 		t.Fatalf("app.New: %v", err)
 	}
 	return a
+}
+
+// requireOllama skips the test if no Ollama server is reachable at
+// testOllamaURL, so the embeddings tests stay portable to environments
+// (like CI) that don't have one running.
+func requireOllama(t *testing.T) {
+	t.Helper()
+	client := http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get(testOllamaURL + "/api/version")
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Skipf("Ollama not reachable at %s; skipping embeddings test", testOllamaURL)
+	}
+	resp.Body.Close()
 }
 
 func TestRefreshSitemap_IncludesAllEntities(t *testing.T) {
@@ -96,5 +116,68 @@ func TestRefreshSearchIndex_Succeeds(t *testing.T) {
 	}
 	if count != 0 {
 		t.Errorf("expected an empty search_index on a fresh test database, got %d rows", count)
+	}
+}
+
+func TestEmbeddings_EndToEndMatchQuality(t *testing.T) {
+	requireOllama(t)
+	a := newTestApp(t)
+	ctx := context.Background()
+
+	backendUser, err := a.Users.Create(ctx, "backend@example.com", "hash", models.RoleCandidate)
+	if err != nil {
+		t.Fatalf("creating backend candidate user: %v", err)
+	}
+	backendCandidate, err := a.Candidates.Create(ctx, &models.Candidate{
+		UserID: backendUser.ID, Slug: "backend-candidate", Name: "Backend Candidate", Zipcode: "12345",
+		Email: "backend@example.com", ResumeHTML: "<p>R</p>",
+		ResumeText: "Senior Go backend engineer with 8 years building distributed systems, PostgreSQL, and Kubernetes.",
+	})
+	if err != nil {
+		t.Fatalf("creating backend candidate: %v", err)
+	}
+
+	designerUser, err := a.Users.Create(ctx, "designer@example.com", "hash", models.RoleCandidate)
+	if err != nil {
+		t.Fatalf("creating designer candidate user: %v", err)
+	}
+	designerCandidate, err := a.Candidates.Create(ctx, &models.Candidate{
+		UserID: designerUser.ID, Slug: "designer-candidate", Name: "Designer Candidate", Zipcode: "12345",
+		Email: "designer@example.com", ResumeHTML: "<p>R</p>",
+		ResumeText: "Creative graphic designer specializing in brand identity, typography, and Adobe Illustrator.",
+	})
+	if err != nil {
+		t.Fatalf("creating designer candidate: %v", err)
+	}
+
+	// Compute embeddings synchronously (not via the fire-and-forget
+	// Trigger* methods) so the test can assert on the result deterministically.
+	a.UpdateCandidateEmbedding(ctx, backendCandidate.ID, backendCandidate.ResumeText)
+	a.UpdateCandidateEmbedding(ctx, designerCandidate.ID, designerCandidate.ResumeText)
+
+	missing, err := a.Candidates.MissingEmbeddings(ctx, 10)
+	if err != nil {
+		t.Fatalf("MissingEmbeddings: %v", err)
+	}
+	if len(missing) != 0 {
+		t.Fatalf("expected both candidates to have embeddings computed, still missing: %+v", missing)
+	}
+
+	jobDescription := "Looking for a backend engineer experienced in Go, PostgreSQL, and building scalable distributed systems."
+	queryVector, err := a.Embeddings.EmbedQuery(ctx, jobDescription)
+	if err != nil {
+		t.Fatalf("EmbedQuery: %v", err)
+	}
+
+	matches, err := a.Candidates.MatchByEmbedding(ctx, embeddings.FormatVector(queryVector), 5)
+	if err != nil {
+		t.Fatalf("MatchByEmbedding: %v", err)
+	}
+	if len(matches) != 2 {
+		t.Fatalf("expected 2 matches, got %d: %+v", len(matches), matches)
+	}
+	if matches[0].Slug != "backend-candidate" {
+		t.Errorf("expected the backend candidate to rank first for a backend job description, got top match %q (results: %+v)",
+			matches[0].Slug, matches)
 	}
 }

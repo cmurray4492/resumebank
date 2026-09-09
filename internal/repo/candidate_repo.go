@@ -80,6 +80,66 @@ func (r *CandidateRepo) SlugExists(ctx context.Context, slug string) (bool, erro
 	return exists, err
 }
 
+// SetEmbedding stores a pgvector literal (see embeddings.FormatVector) as
+// the candidate's resume embedding.
+func (r *CandidateRepo) SetEmbedding(ctx context.Context, id int64, vector string) error {
+	_, err := r.pool.Exec(ctx, `UPDATE candidates SET embedding = $1::vector WHERE id = $2`, vector, id)
+	return err
+}
+
+// MissingEmbeddings returns up to limit candidates whose embedding hasn't
+// been computed yet, for the background backfill sweep.
+func (r *CandidateRepo) MissingEmbeddings(ctx context.Context, limit int) ([]EmbeddingTarget, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id, resume_text FROM candidates WHERE embedding IS NULL LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var targets []EmbeddingTarget
+	for rows.Next() {
+		var t EmbeddingTarget
+		if err := rows.Scan(&t.ID, &t.Text); err != nil {
+			return nil, err
+		}
+		targets = append(targets, t)
+	}
+	return targets, rows.Err()
+}
+
+type CandidateMatch struct {
+	Slug       string
+	Name       string
+	Title      string
+	Similarity float64
+}
+
+// MatchByEmbedding returns the candidates most similar to queryVector
+// (see embeddings.FormatVector), most similar first.
+func (r *CandidateRepo) MatchByEmbedding(ctx context.Context, queryVector string, limit int) ([]CandidateMatch, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT slug, name, title, 1 - (embedding <=> $1::vector) AS similarity
+		FROM candidates
+		WHERE embedding IS NOT NULL
+		ORDER BY embedding <=> $1::vector
+		LIMIT $2`, queryVector, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var matches []CandidateMatch
+	for rows.Next() {
+		var m CandidateMatch
+		if err := rows.Scan(&m.Slug, &m.Name, &m.Title, &m.Similarity); err != nil {
+			return nil, err
+		}
+		matches = append(matches, m)
+	}
+	return matches, rows.Err()
+}
+
 // ListSlugs returns every candidate's slug and last-updated time, for
 // building the sitemap.
 func (r *CandidateRepo) ListSlugs(ctx context.Context) ([]SitemapEntry, error) {

@@ -119,6 +119,9 @@ func (h *CandidateHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	newResumeText := sanitize.PlainText(resumeHTML)
+	resumeChanged := newResumeText != candidate.ResumeText
+
 	candidate.Name = name
 	candidate.Title = strings.TrimSpace(r.FormValue("title"))
 	candidate.City = strings.TrimSpace(r.FormValue("city"))
@@ -129,11 +132,15 @@ func (h *CandidateHandlers) Update(w http.ResponseWriter, r *http.Request) {
 	candidate.Skills = strings.TrimSpace(r.FormValue("skills"))
 	candidate.Summary = strings.TrimSpace(r.FormValue("summary"))
 	candidate.ResumeHTML = resumeHTML
-	candidate.ResumeText = sanitize.PlainText(resumeHTML)
+	candidate.ResumeText = newResumeText
 
-	if _, err := h.App.Candidates.Update(r.Context(), candidate); err != nil {
+	updated, err := h.App.Candidates.Update(r.Context(), candidate)
+	if err != nil {
 		httpServerError(w, err)
 		return
+	}
+	if resumeChanged {
+		h.App.TriggerCandidateEmbedding(updated.ID, updated.ResumeText)
 	}
 	http.Redirect(w, r, "/candidates/"+candidate.Slug, http.StatusSeeOther)
 }
