@@ -274,6 +274,10 @@ Also added on top of the original spec, at the user's request ("password reset f
   `PASSWORD`/`FROM`. If `SMTP_HOST` is unset, a `LogMailer` fallback logs the email instead of
   sending it — deliberately fine for local dev, but `cmd/server` logs a startup warning if this
   happens with `ENV=production`, since it means reset emails silently won't be delivered.
+  **Confirmed on the actual deployment**: Railway blocks outbound SMTP on Free/Trial/Hobby plans
+  (Pro and above only) — see `DEPLOYMENT.md`'s Step 3 and Troubleshooting for the two real gotchas
+  hit in production (that plan restriction, and an envelope-vs-header `From:` address bug that's
+  since been fixed).
 - **Never reveals whether an email has an account.** `/forgot-password` shows the identical "if that
   email is registered..." response either way, and only actually sends an email/creates a token when
   the address matches a real account — otherwise a "forgot password" form becomes a way to discover

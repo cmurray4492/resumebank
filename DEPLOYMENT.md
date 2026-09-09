@@ -87,6 +87,13 @@ account with an [App Password](https://myaccount.google.com/apppasswords) (`smtp
 `587`, your Gmail address as both the username and the "from" address) if you just want something
 that works quickly for a small project.
 
+**Confirmed in production: Railway blocks outbound SMTP (ports 25/465/587/2525) on the Free/Trial/
+Hobby plans** to prevent spam abuse — it's only unblocked on **Pro** ($20/month) and above. If
+you're on Hobby, SMTP will silently hang and time out no matter how correct your credentials are.
+Either upgrade to Pro, or use an email provider with an HTTPS API instead of SMTP (e.g.
+[Resend](https://resend.com), free tier 3,000 emails/month) — that needs a small code change
+(`internal/mailer` would need a second `Mailer` implementation), not just new environment variables.
+
 ## Step 4 — Add a persistent volume for uploaded files
 
 Without this, uploaded PDF resumes and other files would be lost every time you redeploy (Railway's
@@ -203,10 +210,22 @@ nothing extra to run — `AUTO_MIGRATE=true` handles any new database migrations
   `UPLOAD_DIR` doesn't match the mount path you set.
 - **"Forgot password" says it sent an email, but nothing arrives.** If you haven't set the `SMTP_*`
   variables (see Step 3), this is expected — check your deploy logs for the reset link instead. If
-  you *have* set them, double-check the username/password and that your provider's SMTP host/port
-  are correct; a bad password or wrong host shows up as an error in the deploy logs when the reset
-  email fails to send (the user never sees this — it fails silently on their end, by design, so a
-  broken email address doesn't leak which emails have accounts).
+  you *have* set them, check your deploy logs for the actual SMTP error (the user themselves never
+  sees this — it fails silently on their end, by design, so a broken email address doesn't leak
+  which emails have accounts) and look for one of these two confirmed-in-production gotchas:
+  - **The send hangs and eventually fails with a timeout/context-deadline error.** Railway blocks
+    outbound SMTP (ports 25, 465, 587, 2525) on the **Free/Trial/Hobby plans** to prevent spam abuse
+    — it's only unblocked on **Pro and above**. Either upgrade to Pro, or switch to an email
+    provider with an HTTPS API instead of SMTP (e.g. [Resend](https://resend.com), free tier 3,000
+    emails/month) — HTTPS on port 443 is never blocked, but that needs a small code change
+    (`internal/mailer` would need a second `Mailer` implementation calling that provider's API
+    instead of `net/smtp`).
+  - **The send fails immediately with something like `555 5.5.2 Syntax error, cannot decode
+    response`.** This means `SMTP_FROM` is set to a "Display Name &lt;addr&gt;" form (e.g. `resumebank.biz
+    <no-reply@resumebank.biz>`) — which is correct for the email's own `From:` header, but some
+    providers (Gmail included) also require the *separate* SMTP envelope sender to be a bare
+    address, and older code here didn't make that distinction. If you're running a version from
+    before this was fixed, update to the latest `master`.
 - **The site works but matching always says "temporarily unavailable."** Either you skipped Step 6
   on purpose (fine), or your `OLLAMA_URL` doesn't match your Ollama service's internal address, or
   the `nomic-embed-text` model hasn't finished downloading yet — check the Ollama service's logs.
