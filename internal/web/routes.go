@@ -19,6 +19,7 @@ func NewRouter(a *app.App) http.Handler {
 	jobH := NewJobHandlers(a)
 	searchH := NewSearchHandlers(a)
 	fileH := NewFileHandlers(a)
+	messageH := NewMessageHandlers(a)
 
 	mux.HandleFunc("GET /{$}", home.Show)
 	mux.HandleFunc("GET /healthz", home.Healthz)
@@ -50,14 +51,19 @@ func NewRouter(a *app.App) http.Handler {
 	mux.HandleFunc("GET /jobs/{slug}/edit", a.Auth.RequireRole(models.RoleEmployer, jobH.EditForm))
 	mux.HandleFunc("POST /jobs/{slug}/edit", a.Auth.RequireRole(models.RoleEmployer, jobH.Update))
 	mux.HandleFunc("POST /jobs/{slug}/delete", a.Auth.RequireRole(models.RoleEmployer, jobH.Delete))
+	mux.HandleFunc("POST /jobs/{slug}/vote", a.Auth.RequireRole(models.RoleCandidate, jobH.Vote))
 
 	mux.HandleFunc("GET /search", searchH.Search)
 
+	mux.HandleFunc("GET /messages", a.Auth.RequireAuth(messageH.Inbox))
+	mux.HandleFunc("GET /messages/{userID}", a.Auth.RequireAuth(messageH.Thread))
+	mux.HandleFunc("POST /messages/{userID}", a.Auth.RequireAuth(messageH.Send))
+
 	mux.Handle("GET /static/", http.StripPrefix("/static/", a.StaticFileServer()))
 
-	// Phase 2 (not yet implemented): sitemap.xml, hourly search-index rebuild,
-	// employer<->candidate messaging, candidate-only job voting, and the two
-	// embeddings/RAG matching endpoints (POST /match/candidates, /match/jobs).
+	// Phase 3 (not yet implemented): sitemap.xml, hourly search-index rebuild,
+	// and the two embeddings/RAG matching endpoints (POST /match/candidates,
+	// /match/jobs).
 
 	var handler http.Handler = mux
 	handler = a.Auth.LoadSession(handler)

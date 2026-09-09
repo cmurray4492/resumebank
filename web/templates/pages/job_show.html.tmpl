@@ -27,7 +27,29 @@
   </dl>
 
   <h2 class="h5">Description</h2>
-  <div class="job-description border rounded p-3 bg-white">{{safeHTML $j.DescriptionHTML}}</div>
+  <div class="job-description border rounded p-3 bg-white mb-4">{{safeHTML $j.DescriptionHTML}}</div>
+
+  <div class="d-flex align-items-center gap-3">
+    {{if .Data.CanVote}}
+      <form action="/jobs/{{$j.Slug}}/vote" method="post" class="d-inline">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <input type="hidden" name="direction" value="up">
+        <button type="submit" class="btn {{if eq .Data.CurrentVote 1}}btn-success{{else}}btn-outline-success{{end}} btn-sm">
+          &#128077; {{.Data.UpVotes}}
+        </button>
+      </form>
+      <form action="/jobs/{{$j.Slug}}/vote" method="post" class="d-inline">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <input type="hidden" name="direction" value="down">
+        <button type="submit" class="btn {{if eq .Data.CurrentVote -1}}btn-danger{{else}}btn-outline-danger{{end}} btn-sm">
+          &#128078; {{.Data.DownVotes}}
+        </button>
+      </form>
+    {{else}}
+      <span class="text-muted">&#128077; {{.Data.UpVotes}} &nbsp; &#128078; {{.Data.DownVotes}}</span>
+    {{end}}
+  </div>
+
 </article>
 {{end}}
 

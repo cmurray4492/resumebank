@@ -15,6 +15,12 @@
         {{if .CurrentUser}}
           <li class="nav-item"><a class="nav-link" href="/me">My Profile</a></li>
           <li class="nav-item">
+            <a class="nav-link" href="/messages">
+              Messages
+              {{if gt .UnreadMessages 0}}<span class="badge bg-danger rounded-pill">{{.UnreadMessages}}</span>{{end}}
+            </a>
+          </li>
+          <li class="nav-item">
             <form action="/logout" method="post" class="d-inline">
               <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
               <button type="submit" class="btn btn-outline-secondary btn-sm">Log Out</button>

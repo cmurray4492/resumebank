@@ -1,10 +1,10 @@
 # resumebank.biz
 
 A recruiting site connecting candidates and employers, built in Go. See `@SPEC.md` for the original
-project brief. This repo is being built in phases; **this is Phase 1** — accounts, profiles, job
-postings, file uploads, and search. Messaging, job voting, the sitemap/search-index background jobs,
-and the embeddings/RAG "matching" features are planned for later phases (see "What's not built yet"
-below).
+project brief. This repo is being built in phases. **Phase 1** (accounts, profiles, job postings,
+file uploads, and search) and **Phase 2** (employer &lt;-&gt; candidate messaging and candidate-only
+job voting) are done. The sitemap/search-index background jobs and the embeddings/RAG "matching"
+features are planned for a later phase (see "What's not built yet" below).
 
 ## Stack
 
@@ -64,6 +64,11 @@ below).
 - While logged in as one candidate, try navigating directly to another candidate's `/edit` URL —
   you should get a 403 Forbidden. The same applies to employers editing another company's profile
   or jobs.
+- As a candidate, thumbs up/down a job on its job page; click the same direction again to clear
+  your vote. Confirm an employer account gets a 403 trying to vote.
+- As an employer, click "Message" on a candidate's profile, send a message, then log in as that
+  candidate and confirm it shows up in `/messages` with an unread badge in the nav; reply and
+  confirm the employer sees it.
 
 ## Running tests
 
@@ -109,13 +114,22 @@ gofmt -l .   # should print nothing
   `internal/storage` for the deployment phase.
 - Search is plain PostgreSQL full-text search (`tsvector`/`tsquery`), which needs no separate index
   build step — this covers the spec's search requirement without the hourly rebuild job (planned
-  for Phase 2 alongside the sitemap job, using the same corpus differently).
+  for a later phase alongside the sitemap job, using the same corpus differently).
+
+## Notable Phase 2 decisions
+
+- **Messaging is candidate &lt;-&gt; employer only.** Sending a message where both parties have the
+  same role (candidate-to-candidate or employer-to-employer) is rejected with a 400, matching the
+  spec's framing of messaging as a way for "employers and candidates" to reach each other.
+- Messaging has no separate `conversations` table — a "conversation" is derived at query time from
+  `(sender_id, recipient_id)` pairs in `messages`, since a two-party direct-message model doesn't
+  need one.
+- Voting is a toggle: clicking the same direction (up or down) you already voted clears your vote,
+  rather than requiring a separate "remove vote" control.
 
 ## What's not built yet (planned for later phases)
 
 - Sitemap generation (daily) and a separate hourly search-index rebuild job
-- Employer &lt;-&gt; candidate messaging
-- Candidate-only thumbs up/down voting on jobs
 - The two embeddings/RAG "matching" features (employer pastes a JD to find candidates; candidate
   pastes a resume to find jobs), which will use Ollama running locally with an embedding model
   (e.g. `nomic-embed-text`) against the `pgvector` column already enabled in the schema

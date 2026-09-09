@@ -10,6 +10,8 @@
       {{if .Data.IsOwner}}
         <a class="btn btn-outline-primary me-2" href="/employers/{{$e.Slug}}/edit">Edit Profile</a>
         <a class="btn btn-primary" href="/employers/{{$e.Slug}}/jobs/new">Post a Job</a>
+      {{else if and .CurrentUser (eq (printf "%v" .CurrentUser.Role) "candidate")}}
+        <a class="btn btn-outline-primary" href="/messages/{{$e.UserID}}">Message {{$e.CompanyName}}</a>
       {{end}}
     </div>
   </header>

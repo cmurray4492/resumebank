@@ -91,3 +91,20 @@ type CandidateFile struct {
 	Position         int16
 	CreatedAt        time.Time
 }
+
+type JobVote struct {
+	CandidateID int64
+	JobID       int64
+	Vote        int16 // +1 or -1
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type Message struct {
+	ID          int64
+	SenderID    int64
+	RecipientID int64
+	Body        string
+	CreatedAt   time.Time
+	ReadAt      *time.Time
+}

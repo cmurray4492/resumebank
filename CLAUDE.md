@@ -12,7 +12,11 @@ Keep your replies extremely concise and focus on conveying key information. N o 
 
 ## Repository state
 
-This repository currently contains only `@SPEC.md` — a project brief for a Go-based recruiting website ("resumebank.biz"). No source code, build tooling, or tests exist yet. There are no build/lint/test commands to document until the project is scaffolded.
+This is a Go web app implementing `@SPEC.md` (a recruiting website, "resumebank.biz"), built in phases. **Phase 1** (accounts, candidate/employer/job CRUD with SEO pages, file uploads, Postgres full-text search) and **Phase 2** (employer&lt;-&gt;candidate messaging, candidate-only job voting) are implemented. Not yet built: the sitemap/hourly-search-index background jobs, the embeddings/RAG matching features, and deployment config — see `README.md`'s "What's not built yet" section for current status, and re-check it before assuming a feature is missing.
+
+Confirmed technology choices (do not re-litigate; see `README.md` "Stack"): Go stdlib `net/http` + `html/template`, Bootstrap 5, Quill.js, PostgreSQL + `pgvector` (enabled now, used starting with the embeddings phase), `jackc/pgx/v5`, `bluemonday`, `bcrypt`, Go's standard `testing` package. Deployment target: Railway (not yet configured).
+
+Build/lint/test commands, local run instructions, and the DB-gated test caveat (`go test -p 1 ./...`) are documented in `README.md` — read that before running tests or the server.
 
 ## Project brief summary
 
@@ -28,4 +32,4 @@ When starting implementation, re-read `@SPEC.md` in full for exact field lists a
 
 ## Working on this repo
 
-Since there is no existing code, architecture, or conventions to follow yet, the first substantive task in this repo is almost certainly scaffolding the Go module, database schema, and template structure from scratch. Confirm technology choices left open by the spec (template engine, vector database, embedding model, WYSIWYG editor) with the user before committing to one, since the spec explicitly says to select "an appropriate" option rather than naming one.
+Follow the existing patterns rather than introducing new ones: `internal/repo` for SQL access (one file per aggregate), `internal/web` for handlers (one file per feature, ownership checks inline per handler rather than generic middleware), `internal/db/migrations` for schema changes (new numbered `.sql` files, never edit an already-applied migration), and `web/templates/pages` for one template per page defining both a `content` and a `scripts` block. New third-party libraries or schema/architecture decisions with real trade-offs should still be confirmed with the user first.

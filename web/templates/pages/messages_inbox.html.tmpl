@@ -1,0 +1,21 @@
+{{define "content"}}
+<h1 class="h3 mb-4">Messages</h1>
+
+{{if .Data}}
+  <div class="list-group">
+    {{range .Data}}
+      <a href="/messages/{{.OtherUserID}}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+        <div>
+          <div class="fw-bold">{{.OtherName}}{{if gt .UnreadCount 0}} <span class="badge bg-danger rounded-pill">{{.UnreadCount}}</span>{{end}}</div>
+          <div class="text-muted small">{{.LastBody}}</div>
+        </div>
+        <span class="text-muted small">{{formatDate .LastAt}}</span>
+      </a>
+    {{end}}
+  </div>
+{{else}}
+  <p class="text-muted">No messages yet. Visit a candidate or employer profile to start a conversation.</p>
+{{end}}
+{{end}}
+
+{{define "scripts"}}{{end}}

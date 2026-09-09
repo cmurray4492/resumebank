@@ -24,6 +24,10 @@ type jobView struct {
 	CompanyName  string
 	EmployerSlug string
 	IsOwner      bool
+	UpVotes      int
+	DownVotes    int
+	CanVote      bool
+	CurrentVote  int16 // +1, -1, or 0 (no vote); only meaningful when CanVote
 }
 
 func (h *JobHandlers) Show(w http.ResponseWriter, r *http.Request) {
@@ -43,12 +47,30 @@ func (h *JobHandlers) Show(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	up, down, err := h.App.Votes.Counts(r.Context(), job.ID)
+	if err != nil {
+		httpServerError(w, err)
+		return
+	}
+
 	u := currentUser(r)
 	view := jobView{
 		Job:          job,
 		CompanyName:  emp.CompanyName,
 		EmployerSlug: emp.Slug,
 		IsOwner:      u != nil && u.ID == emp.UserID,
+		UpVotes:      up,
+		DownVotes:    down,
+	}
+	if u != nil && u.Role == models.RoleCandidate {
+		if candidate, err := h.App.Candidates.GetByUserID(r.Context(), u.ID); err == nil {
+			view.CanVote = true
+			view.CurrentVote, err = h.App.Votes.GetVote(r.Context(), candidate.ID, job.ID)
+			if err != nil {
+				httpServerError(w, err)
+				return
+			}
+		}
 	}
 	desc := job.Title + " at " + emp.CompanyName
 	if job.Location != "" {
@@ -56,6 +78,60 @@ func (h *JobHandlers) Show(w http.ResponseWriter, r *http.Request) {
 	}
 	pd := newPageData(h.App, w, r, job.Title+" at "+emp.CompanyName, desc, view)
 	h.App.Renderer.Render(w, http.StatusOK, "job_show.html.tmpl", pd)
+}
+
+// Vote records or toggles a candidate's thumbs up/down on a job. Voting the
+// same direction again clears the vote.
+func (h *JobHandlers) Vote(w http.ResponseWriter, r *http.Request) {
+	slugVal := r.PathValue("slug")
+	job, err := h.App.Jobs.GetBySlug(r.Context(), slugVal)
+	if err != nil {
+		if err == repo.ErrNotFound {
+			httpx.NotFound(w, r)
+			return
+		}
+		httpServerError(w, err)
+		return
+	}
+	if !h.App.Auth.VerifyCSRF(r) {
+		http.Error(w, "Invalid or missing CSRF token", http.StatusForbidden)
+		return
+	}
+
+	u := currentUser(r)
+	candidate, err := h.App.Candidates.GetByUserID(r.Context(), u.ID)
+	if err != nil {
+		httpServerError(w, err)
+		return
+	}
+
+	var direction int16
+	switch r.FormValue("direction") {
+	case "up":
+		direction = 1
+	case "down":
+		direction = -1
+	default:
+		httpx.BadRequest(w, "direction must be \"up\" or \"down\"")
+		return
+	}
+
+	current, err := h.App.Votes.GetVote(r.Context(), candidate.ID, job.ID)
+	if err != nil {
+		httpServerError(w, err)
+		return
+	}
+	if current == direction {
+		err = h.App.Votes.Clear(r.Context(), candidate.ID, job.ID)
+	} else {
+		err = h.App.Votes.Set(r.Context(), candidate.ID, job.ID, direction)
+	}
+	if err != nil {
+		httpServerError(w, err)
+		return
+	}
+
+	http.Redirect(w, r, "/jobs/"+job.Slug, http.StatusSeeOther)
 }
 
 func (h *JobHandlers) NewForm(w http.ResponseWriter, r *http.Request) {

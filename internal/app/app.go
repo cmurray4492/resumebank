@@ -26,6 +26,8 @@ type App struct {
 	Employers  *repo.EmployerRepo
 	Jobs       *repo.JobRepo
 	Files      *repo.FileRepo
+	Votes      *repo.VoteRepo
+	Messages   *repo.MessageRepo
 }
 
 func New(cfg *config.Config, pool *pgxpool.Pool) (*App, error) {
@@ -51,6 +53,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool) (*App, error) {
 		Employers:  repo.NewEmployerRepo(pool),
 		Jobs:       repo.NewJobRepo(pool),
 		Files:      repo.NewFileRepo(pool),
+		Votes:      repo.NewVoteRepo(pool),
+		Messages:   repo.NewMessageRepo(pool),
 	}
 	return a, nil
 }

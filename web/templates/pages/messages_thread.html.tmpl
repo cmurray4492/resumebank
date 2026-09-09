@@ -1,0 +1,33 @@
+{{define "content"}}
+<h1 class="h3 mb-1">
+  Conversation with
+  {{if .Data.OtherLink}}<a href="{{.Data.OtherLink}}">{{.Data.OtherName}}</a>{{else}}{{.Data.OtherName}}{{end}}
+</h1>
+<p class="mb-4"><a href="/messages">&larr; Back to Messages</a></p>
+
+<div class="mb-4" style="max-width: 700px;">
+  {{if .Data.Messages}}
+    {{range .Data.Messages}}
+      {{$mine := eq .SenderID $.Data.CurrentUser.ID}}
+      <div class="d-flex mb-2 {{if $mine}}justify-content-end{{end}}">
+        <div class="p-2 rounded {{if $mine}}bg-primary text-white{{else}}bg-light{{end}}" style="max-width: 75%;">
+          <div>{{.Body}}</div>
+          <div class="small {{if $mine}}text-white-50{{else}}text-muted{{end}}">{{formatDate .CreatedAt}}</div>
+        </div>
+      </div>
+    {{end}}
+  {{else}}
+    <p class="text-muted">No messages yet. Say hello!</p>
+  {{end}}
+</div>
+
+<form method="post" action="/messages/{{.Data.OtherUserID}}" style="max-width: 700px;">
+  <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+  <div class="mb-3">
+    <textarea class="form-control" name="body" rows="3" placeholder="Write a message..." required></textarea>
+  </div>
+  <button type="submit" class="btn btn-primary">Send</button>
+</form>
+{{end}}
+
+{{define "scripts"}}{{end}}
