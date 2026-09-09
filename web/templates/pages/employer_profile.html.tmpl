@@ -1,0 +1,46 @@
+{{define "content"}}
+{{$e := .Data.Employer}}
+<article>
+  <header class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h1>{{$e.CompanyName}}</h1>
+      {{if $e.Industry}}<p class="lead text-muted">{{$e.Industry}}</p>{{end}}
+    </div>
+    <div>
+      {{if .Data.IsOwner}}
+        <a class="btn btn-outline-primary me-2" href="/employers/{{$e.Slug}}/edit">Edit Profile</a>
+        <a class="btn btn-primary" href="/employers/{{$e.Slug}}/jobs/new">Post a Job</a>
+      {{end}}
+    </div>
+  </header>
+
+  <dl class="row">
+    {{if $e.City}}<dt class="col-sm-2">Location</dt><dd class="col-sm-10">{{$e.City}}{{if $e.State}}, {{$e.State}}{{end}} {{$e.Zipcode}}</dd>{{end}}
+    {{if $e.Website}}<dt class="col-sm-2">Website</dt><dd class="col-sm-10"><a href="{{$e.Website}}" rel="noopener">{{$e.Website}}</a></dd>{{end}}
+    {{if $e.Phone}}<dt class="col-sm-2">Phone</dt><dd class="col-sm-10">{{$e.Phone}}</dd>{{end}}
+    {{if $e.EmailAddress}}<dt class="col-sm-2">Email</dt><dd class="col-sm-10">{{$e.EmailAddress}}</dd>{{end}}
+    {{if $e.Locations}}<dt class="col-sm-2">Locations</dt><dd class="col-sm-10">{{$e.Locations}}</dd>{{end}}
+  </dl>
+
+  {{if $e.Description}}
+    <h2 class="h5">About {{$e.CompanyName}}</h2>
+    <p>{{$e.Description}}</p>
+  {{end}}
+
+  <h2 class="h5 mt-4">Open Positions</h2>
+  {{if .Data.Jobs}}
+    <ul class="list-group">
+      {{range .Data.Jobs}}
+        <li class="list-group-item">
+          <a href="/jobs/{{.Slug}}">{{.Title}}</a>
+          {{if .Location}}<span class="text-muted"> &mdash; {{.Location}}</span>{{end}}
+        </li>
+      {{end}}
+    </ul>
+  {{else}}
+    <p class="text-muted">No open positions posted yet.</p>
+  {{end}}
+</article>
+{{end}}
+
+{{define "scripts"}}{{end}}

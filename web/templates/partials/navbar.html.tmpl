@@ -1,0 +1,39 @@
+{{define "navbar.html.tmpl"}}
+<nav class="navbar navbar-expand-md navbar-light bg-white border-bottom">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="/">
+      <img src="/static/img/logo.svg" alt="resumebank.biz" height="32" class="d-inline-block align-text-top me-2">
+      resumebank.biz
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav ms-auto align-items-md-center">
+        <li class="nav-item"><a class="nav-link" href="/search?type=candidates">Find Candidates</a></li>
+        <li class="nav-item"><a class="nav-link" href="/search?type=jobs">Find Jobs</a></li>
+        {{if .CurrentUser}}
+          <li class="nav-item"><a class="nav-link" href="/me">My Profile</a></li>
+          <li class="nav-item">
+            <form action="/logout" method="post" class="d-inline">
+              <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+              <button type="submit" class="btn btn-outline-secondary btn-sm">Log Out</button>
+            </form>
+          </li>
+        {{else}}
+          <li class="nav-item"><a class="nav-link" href="/login">Log In</a></li>
+          <li class="nav-item">
+            <div class="dropdown">
+              <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">Sign Up</button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="/signup/candidate">As a Candidate</a></li>
+                <li><a class="dropdown-item" href="/signup/employer">As an Employer</a></li>
+              </ul>
+            </div>
+          </li>
+        {{end}}
+      </ul>
+    </div>
+  </div>
+</nav>
+{{end}}

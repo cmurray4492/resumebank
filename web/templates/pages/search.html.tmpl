@@ -1,0 +1,65 @@
+{{define "content"}}
+<h1 class="h3 mb-4">Search</h1>
+
+<form method="get" action="/search" class="row g-2 mb-4 align-items-center">
+  <div class="col-auto">
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="type" id="type_candidates" value="candidates" {{if eq .Data.Type "candidates"}}checked{{end}}>
+      <label class="form-check-label" for="type_candidates">Candidates</label>
+    </div>
+  </div>
+  <div class="col-auto">
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="type" id="type_jobs" value="jobs" {{if eq .Data.Type "jobs"}}checked{{end}}>
+      <label class="form-check-label" for="type_jobs">Jobs</label>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <input type="search" class="form-control" name="q" placeholder="Search by keyword, skill, or title" value="{{.Data.Query}}">
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-primary">Search</button>
+  </div>
+</form>
+
+{{if eq .Data.Type "jobs"}}
+  {{if .Data.JobHits}}
+    <ul class="list-group mb-4">
+      {{range .Data.JobHits}}
+        <li class="list-group-item">
+          <a href="/jobs/{{.Job.Slug}}">{{.Job.Title}}</a>
+          <span class="text-muted"> at {{.CompanyName}}{{if .Job.Location}} &mdash; {{.Job.Location}}{{end}}</span>
+        </li>
+      {{end}}
+    </ul>
+  {{else}}
+    <p class="text-muted">No jobs found.</p>
+  {{end}}
+{{else}}
+  {{if .Data.CandidateHits}}
+    <ul class="list-group mb-4">
+      {{range .Data.CandidateHits}}
+        <li class="list-group-item">
+          <a href="/candidates/{{.Candidate.Slug}}">{{.Candidate.Name}}</a>
+          {{if .Candidate.Title}}<span class="text-muted"> &mdash; {{.Candidate.Title}}</span>{{end}}
+        </li>
+      {{end}}
+    </ul>
+  {{else}}
+    <p class="text-muted">No candidates found.</p>
+  {{end}}
+{{end}}
+
+<nav>
+  <ul class="pagination">
+    {{if .Data.HasPrevPage}}
+      <li class="page-item"><a class="page-link" href="/search?type={{.Data.Type}}&q={{.Data.Query}}&page={{.Data.PrevPage}}">Previous</a></li>
+    {{end}}
+    {{if .Data.HasNextPage}}
+      <li class="page-item"><a class="page-link" href="/search?type={{.Data.Type}}&q={{.Data.Query}}&page={{.Data.NextPage}}">Next</a></li>
+    {{end}}
+  </ul>
+</nav>
+{{end}}
+
+{{define "scripts"}}{{end}}

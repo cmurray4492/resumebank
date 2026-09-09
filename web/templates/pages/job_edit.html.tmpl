@@ -1,0 +1,54 @@
+{{define "content"}}
+{{$j := .Data}}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <h1 class="h3 mb-4">Edit Job Posting</h1>
+    <form method="post" action="/jobs/{{$j.Slug}}/edit" novalidate>
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+      <div class="mb-3">
+        <label class="form-label" for="title">Title *</label>
+        <input type="text" class="form-control {{if index .Errors "title"}}is-invalid{{end}}" id="title" name="title" value="{{$j.Title}}" required>
+        {{with index .Errors "title"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+      </div>
+
+      <div class="row">
+        <div class="mb-3 col-md-6">
+          <label class="form-label" for="location">Location</label>
+          <input type="text" class="form-control" id="location" name="location" value="{{$j.Location}}">
+        </div>
+        <div class="mb-3 col-md-6">
+          <label class="form-label" for="job_number">Job Number</label>
+          <input type="text" class="form-control" id="job_number" name="job_number" value="{{$j.JobNumber}}">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="mb-3 col-md-6">
+          <label class="form-label" for="salary_min">Salary Min</label>
+          <input type="number" class="form-control" id="salary_min" name="salary_min" min="0" value="{{if $j.SalaryMin}}{{derefInt $j.SalaryMin}}{{end}}">
+        </div>
+        <div class="mb-3 col-md-6">
+          <label class="form-label" for="salary_max">Salary Max</label>
+          <input type="number" class="form-control" id="salary_max" name="salary_max" min="0" value="{{if $j.SalaryMax}}{{derefInt $j.SalaryMax}}{{end}}">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Description *</label>
+        <div id="job-description-editor" style="height: 250px;"></div>
+        <textarea name="description_html" id="description_html" hidden>{{$j.DescriptionHTML}}</textarea>
+        {{with index .Errors "description_html"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+      </div>
+
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </form>
+  </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+  initRichTextEditor('job-description-editor', 'description_html');
+</script>
+{{end}}

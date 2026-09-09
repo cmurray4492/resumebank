@@ -1,0 +1,41 @@
+{{define "content"}}
+<div class="p-5 mb-4 bg-light rounded-3">
+  <h1 class="display-6 fw-bold">Connect candidates and employers</h1>
+  <p class="col-md-8 fs-5">Build a searchable candidate profile with a rich-text resume, or post jobs and find great talent.</p>
+  <a class="btn btn-primary btn-lg me-2" href="/signup/candidate">I'm looking for a job</a>
+  <a class="btn btn-outline-primary btn-lg" href="/signup/employer">I'm hiring</a>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <h2 class="h4">Recent Candidates</h2>
+    {{if .Data.RecentCandidates}}
+      <ul class="list-group mb-4">
+        {{range .Data.RecentCandidates}}
+          <li class="list-group-item">
+            <a href="/candidates/{{.Candidate.Slug}}">{{.Candidate.Name}}</a>
+            {{if .Candidate.Title}}<span class="text-muted"> &mdash; {{.Candidate.Title}}</span>{{end}}
+          </li>
+        {{end}}
+      </ul>
+    {{else}}
+      <p class="text-muted">No candidate profiles yet.</p>
+    {{end}}
+  </div>
+  <div class="col-md-6">
+    <h2 class="h4">Recent Jobs</h2>
+    {{if .Data.RecentJobs}}
+      <ul class="list-group mb-4">
+        {{range .Data.RecentJobs}}
+          <li class="list-group-item">
+            <a href="/jobs/{{.Job.Slug}}">{{.Job.Title}}</a>
+            <span class="text-muted"> at {{.CompanyName}}</span>
+          </li>
+        {{end}}
+      </ul>
+    {{else}}
+      <p class="text-muted">No job postings yet.</p>
+    {{end}}
+  </div>
+</div>
+{{end}}

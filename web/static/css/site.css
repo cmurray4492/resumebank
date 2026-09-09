@@ -1,0 +1,8 @@
+.ql-editor {
+  min-height: 200px;
+  background: #fff;
+}
+
+.candidate-resume, .job-description {
+  line-height: 1.6;
+}

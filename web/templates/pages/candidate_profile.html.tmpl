@@ -1,0 +1,52 @@
+{{define "content"}}
+{{$c := .Data.Candidate}}
+<article>
+  <header class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h1>{{$c.Name}}</h1>
+      {{if $c.Title}}<p class="lead text-muted">{{$c.Title}}</p>{{end}}
+    </div>
+    {{if .Data.IsOwner}}
+      <a class="btn btn-outline-primary" href="/candidates/{{$c.Slug}}/edit">Edit Profile</a>
+    {{end}}
+  </header>
+
+  <dl class="row">
+    {{if $c.City}}<dt class="col-sm-2">Location</dt><dd class="col-sm-10">{{$c.City}}{{if $c.State}}, {{$c.State}}{{end}} {{$c.Zipcode}}</dd>{{end}}
+    <dt class="col-sm-2">Email</dt><dd class="col-sm-10">{{$c.Email}}</dd>
+    {{if $c.LinkedInURL}}<dt class="col-sm-2">LinkedIn</dt><dd class="col-sm-10"><a href="{{$c.LinkedInURL}}" rel="noopener">{{$c.LinkedInURL}}</a></dd>{{end}}
+    {{if $c.Skills}}<dt class="col-sm-2">Skills</dt><dd class="col-sm-10">{{$c.Skills}}</dd>{{end}}
+  </dl>
+
+  {{if $c.Summary}}
+    <h2 class="h5">Summary</h2>
+    <p>{{$c.Summary}}</p>
+  {{end}}
+
+  <h2 class="h5">Resume</h2>
+  <div class="candidate-resume border rounded p-3 bg-white">{{safeHTML $c.ResumeHTML}}</div>
+
+  <h2 class="h5 mt-4">Files</h2>
+  {{if .Data.Files}}
+    <ul class="list-group mb-3" style="max-width: 400px;">
+      {{range .Data.Files}}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <a href="/files/{{.ID}}/download" target="_blank" rel="noopener">
+            {{if eq (printf "%v" .Kind) "resume_pdf"}}Resume (PDF){{else}}{{.OriginalFilename}}{{end}}
+          </a>
+          {{if $.Data.IsOwner}}
+            <form action="/candidates/{{$c.Slug}}/files/{{.ID}}/delete" method="post" class="d-inline">
+              <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+              <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+            </form>
+          {{end}}
+        </li>
+      {{end}}
+    </ul>
+  {{else}}
+    <p class="text-muted">No files uploaded yet.</p>
+  {{end}}
+</article>
+{{end}}
+
+{{define "scripts"}}{{end}}

@@ -1,0 +1,117 @@
+{{define "content"}}
+{{$c := .Data.Candidate}}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <h1 class="h3 mb-4">Edit Your Profile</h1>
+    <form method="post" action="/candidates/{{$c.Slug}}/edit" novalidate>
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+      <div class="mb-3">
+        <label class="form-label" for="name">Name *</label>
+        <input type="text" class="form-control {{if index .Errors "name"}}is-invalid{{end}}" id="name" name="name" value="{{$c.Name}}" required>
+        {{with index .Errors "name"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="title">Title</label>
+        <input type="text" class="form-control" id="title" name="title" value="{{$c.Title}}">
+        <div class="form-text">The title you want prospective employers to see.</div>
+      </div>
+
+      <div class="row">
+        <div class="mb-3 col-md-4">
+          <label class="form-label" for="city">City</label>
+          <input type="text" class="form-control" id="city" name="city" value="{{$c.City}}">
+        </div>
+        <div class="mb-3 col-md-4">
+          <label class="form-label" for="state">State</label>
+          <input type="text" class="form-control" id="state" name="state" value="{{$c.State}}">
+        </div>
+        <div class="mb-3 col-md-4">
+          <label class="form-label" for="zipcode">Zipcode *</label>
+          <input type="text" class="form-control {{if index .Errors "zipcode"}}is-invalid{{end}}" id="zipcode" name="zipcode" value="{{$c.Zipcode}}" required>
+          {{with index .Errors "zipcode"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="email">Email *</label>
+        <input type="email" class="form-control {{if index .Errors "email"}}is-invalid{{end}}" id="email" name="email" value="{{$c.Email}}" required>
+        {{with index .Errors "email"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="linkedin_url">LinkedIn URL</label>
+        <input type="url" class="form-control" id="linkedin_url" name="linkedin_url" value="{{$c.LinkedInURL}}">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="skills">Skills</label>
+        <input type="text" class="form-control" id="skills" name="skills" value="{{$c.Skills}}">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="summary">Candidate Summary</label>
+        <textarea class="form-control" id="summary" name="summary" rows="3">{{$c.Summary}}</textarea>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Resume *</label>
+        <div id="resume-editor" style="height: 250px;"></div>
+        <textarea name="resume_html" id="resume_html" hidden>{{$c.ResumeHTML}}</textarea>
+        {{with index .Errors "resume_html"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+      </div>
+
+      <button type="submit" class="btn btn-primary">Save Profile</button>
+    </form>
+
+    <hr class="my-5">
+
+    <h2 class="h4">Files</h2>
+    <p class="text-muted">Upload your PDF resume (required) and up to 3 additional public files.</p>
+    <ul class="list-group mb-3">
+      {{range .Data.Files}}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <a href="/files/{{.ID}}/download" target="_blank" rel="noopener">
+            {{if eq (printf "%v" .Kind) "resume_pdf"}}Resume (PDF): {{end}}{{.OriginalFilename}}
+          </a>
+          <form action="/candidates/{{$c.Slug}}/files/{{.ID}}/delete" method="post" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+          </form>
+        </li>
+      {{end}}
+    </ul>
+
+    <form action="/candidates/{{$c.Slug}}/files" method="post" enctype="multipart/form-data" class="row g-2 align-items-end mb-3">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <input type="hidden" name="kind" value="resume_pdf">
+      <div class="col-auto">
+        <label class="form-label" for="resume_pdf_file">Upload PDF Resume</label>
+        <input type="file" class="form-control" id="resume_pdf_file" name="file" accept=".pdf" required>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary">Upload</button>
+      </div>
+    </form>
+
+    <form action="/candidates/{{$c.Slug}}/files" method="post" enctype="multipart/form-data" class="row g-2 align-items-end">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <input type="hidden" name="kind" value="additional">
+      <div class="col-auto">
+        <label class="form-label" for="additional_file">Upload Additional File (up to 3)</label>
+        <input type="file" class="form-control" id="additional_file" name="file" required>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-outline-secondary">Upload</button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+  initRichTextEditor('resume-editor', 'resume_html');
+</script>
+{{end}}

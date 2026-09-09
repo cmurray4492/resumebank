@@ -1,0 +1,81 @@
+{{define "content"}}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <h1 class="h3 mb-4">Create an Employer Account</h1>
+    <form method="post" action="/signup/employer" novalidate>
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+      <div class="row">
+        <div class="mb-3 col-md-6">
+          <label class="form-label" for="email">Email *</label>
+          <input type="email" class="form-control {{if index .Errors "email"}}is-invalid{{end}}" id="email" name="email" required>
+          {{with index .Errors "email"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+        </div>
+        <div class="mb-3 col-md-6">
+          <label class="form-label" for="password">Password *</label>
+          <input type="password" class="form-control {{if index .Errors "password"}}is-invalid{{end}}" id="password" name="password" required>
+          {{with index .Errors "password"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="company_name">Company Name *</label>
+        <input type="text" class="form-control {{if index .Errors "company_name"}}is-invalid{{end}}" id="company_name" name="company_name" required>
+        {{with index .Errors "company_name"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="industry">Industry</label>
+        <input type="text" class="form-control" id="industry" name="industry">
+      </div>
+
+      <div class="row">
+        <div class="mb-3 col-md-4">
+          <label class="form-label" for="city">City</label>
+          <input type="text" class="form-control" id="city" name="city">
+        </div>
+        <div class="mb-3 col-md-4">
+          <label class="form-label" for="state">State</label>
+          <input type="text" class="form-control" id="state" name="state">
+        </div>
+        <div class="mb-3 col-md-4">
+          <label class="form-label" for="zipcode">Zipcode *</label>
+          <input type="text" class="form-control {{if index .Errors "zipcode"}}is-invalid{{end}}" id="zipcode" name="zipcode" required>
+          {{with index .Errors "zipcode"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="mb-3 col-md-6">
+          <label class="form-label" for="phone">Phone</label>
+          <input type="text" class="form-control" id="phone" name="phone">
+        </div>
+        <div class="mb-3 col-md-6">
+          <label class="form-label" for="email_address">Public Contact Email</label>
+          <input type="email" class="form-control" id="email_address" name="email_address">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="website">Website</label>
+        <input type="url" class="form-control" id="website" name="website">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="locations">Locations</label>
+        <input type="text" class="form-control" id="locations" name="locations">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="description">Description</label>
+        <textarea class="form-control" id="description" name="description" rows="4"
+          placeholder="Describe your organization and why people should want to work there."></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Create Account</button>
+    </form>
+  </div>
+</div>
+{{end}}
+
+{{define "scripts"}}{{end}}

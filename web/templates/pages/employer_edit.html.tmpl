@@ -1,0 +1,68 @@
+{{define "content"}}
+{{$e := .Data}}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <h1 class="h3 mb-4">Edit Company Profile</h1>
+    <form method="post" action="/employers/{{$e.Slug}}/edit" novalidate>
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+      <div class="mb-3">
+        <label class="form-label" for="company_name">Company Name *</label>
+        <input type="text" class="form-control {{if index .Errors "company_name"}}is-invalid{{end}}" id="company_name" name="company_name" value="{{$e.CompanyName}}" required>
+        {{with index .Errors "company_name"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="industry">Industry</label>
+        <input type="text" class="form-control" id="industry" name="industry" value="{{$e.Industry}}">
+      </div>
+
+      <div class="row">
+        <div class="mb-3 col-md-4">
+          <label class="form-label" for="city">City</label>
+          <input type="text" class="form-control" id="city" name="city" value="{{$e.City}}">
+        </div>
+        <div class="mb-3 col-md-4">
+          <label class="form-label" for="state">State</label>
+          <input type="text" class="form-control" id="state" name="state" value="{{$e.State}}">
+        </div>
+        <div class="mb-3 col-md-4">
+          <label class="form-label" for="zipcode">Zipcode *</label>
+          <input type="text" class="form-control {{if index .Errors "zipcode"}}is-invalid{{end}}" id="zipcode" name="zipcode" value="{{$e.Zipcode}}" required>
+          {{with index .Errors "zipcode"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="mb-3 col-md-6">
+          <label class="form-label" for="phone">Phone</label>
+          <input type="text" class="form-control" id="phone" name="phone" value="{{$e.Phone}}">
+        </div>
+        <div class="mb-3 col-md-6">
+          <label class="form-label" for="email_address">Public Contact Email</label>
+          <input type="email" class="form-control" id="email_address" name="email_address" value="{{$e.EmailAddress}}">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="website">Website</label>
+        <input type="url" class="form-control" id="website" name="website" value="{{$e.Website}}">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="locations">Locations</label>
+        <input type="text" class="form-control" id="locations" name="locations" value="{{$e.Locations}}">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="description">Description</label>
+        <textarea class="form-control" id="description" name="description" rows="4">{{$e.Description}}</textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Save Profile</button>
+    </form>
+  </div>
+</div>
+{{end}}
+
+{{define "scripts"}}{{end}}
