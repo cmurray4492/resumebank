@@ -37,6 +37,7 @@ func NewRouter(a *app.App) http.Handler {
 	mux.HandleFunc("GET /me", home.Me)
 	mux.HandleFunc("GET /about", staticH.About)
 	mux.HandleFunc("GET /terms", staticH.Terms)
+	mux.HandleFunc("GET /privacy", staticH.Privacy)
 
 	mux.HandleFunc("GET /blog", blogH.Index)
 	mux.HandleFunc("GET /blog/{slug}", blogH.Show)

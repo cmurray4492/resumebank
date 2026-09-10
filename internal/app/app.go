@@ -102,6 +102,7 @@ func (a *App) RefreshSitemap(ctx context.Context) error {
 		{Loc: a.Config.BaseURL + "/search"},
 		{Loc: a.Config.BaseURL + "/about"},
 		{Loc: a.Config.BaseURL + "/terms"},
+		{Loc: a.Config.BaseURL + "/privacy"},
 		{Loc: a.Config.BaseURL + "/blog"},
 	}
 

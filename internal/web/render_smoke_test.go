@@ -24,7 +24,7 @@ func TestRenderSmoke_PublicPagesRenderWithoutError(t *testing.T) {
 	router := web.NewRouter(a)
 
 	paths := []string{
-		"/", "/about", "/terms", "/search", "/login",
+		"/", "/about", "/terms", "/privacy", "/search", "/login",
 		"/signup/candidate", "/signup/employer",
 		"/blog", "/admin/login",
 		"/forgot-password", "/reset-password/some-token",

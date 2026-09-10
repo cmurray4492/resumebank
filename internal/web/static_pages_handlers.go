@@ -25,3 +25,9 @@ func (h *StaticPageHandlers) Terms(w http.ResponseWriter, r *http.Request) {
 		"The terms and conditions for using resumebank.biz.", nil)
 	h.App.Renderer.Render(w, http.StatusOK, "terms.html.tmpl", pd)
 }
+
+func (h *StaticPageHandlers) Privacy(w http.ResponseWriter, r *http.Request) {
+	pd := newPageData(h.App, w, r, "Privacy Policy",
+		"How resumebank.biz collects, uses, and protects your personal data, including your GDPR and CCPA privacy rights.", nil)
+	h.App.Renderer.Render(w, http.StatusOK, "privacy.html.tmpl", pd)
+}
