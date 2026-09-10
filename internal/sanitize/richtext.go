@@ -22,6 +22,13 @@ func newPolicy() *bluemonday.Policy {
 		"blockquote", "pre", "code", "sub", "sup",
 		"ol", "ul", "li", "h1", "h2", "h3", "h4", "h5", "h6", "span", "div", "a")
 	p.AllowAttrs("href").OnElements("a")
+	// Quill renders bullet AND ordered lists as <ol><li data-list="...">,
+	// distinguishing them only via this attribute (no <ul> is ever emitted) -
+	// stripping it silently turns every bullet list into a numbered one,
+	// since a bare <li> inside <ol> falls back to default browser numbering.
+	// See the .rich-text rules in web/static/css/site.css, which render the
+	// actual marker (bullet/number/checkbox) from this attribute.
+	p.AllowAttrs("data-list").Matching(regexp.MustCompile(`^(bullet|ordered|checked|unchecked)$`)).OnElements("li")
 	p.AllowAttrs("class").Matching(regexp.MustCompile(`^ql-[a-zA-Z0-9-]+$`)).Globally()
 	p.AllowAttrs("style").Matching(regexp.MustCompile(`^[a-zA-Z-]+:\s*[a-zA-Z0-9%.\s-]+;?$`)).Globally()
 

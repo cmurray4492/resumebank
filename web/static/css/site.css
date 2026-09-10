@@ -3,6 +3,71 @@
   background: #fff;
 }
 
-.candidate-resume, .job-description {
-  line-height: 1.6;
+/* Shared styling for sanitized Quill output rendered outside the editor
+   (candidate resumes, job descriptions, blog posts). Quill's own
+   quill.snow.css is scoped to .ql-editor and keys its list markers off a
+   child <span class="ql-ui"> that internal/sanitize strips (an empty,
+   purpose-only element isn't worth allow-listing through a sanitizer), so
+   list markers are drawn here directly from the data-list attribute Quill
+   puts on <li> instead - see internal/sanitize/richtext.go. */
+.rich-text {
+  line-height: 1.5;
 }
+
+.rich-text p {
+  margin-bottom: 0.5rem;
+}
+
+.rich-text ol,
+.rich-text ul {
+  padding-left: 0;
+  margin-bottom: 0.5rem;
+}
+
+.rich-text ol {
+  counter-reset: rich-text-ordered;
+}
+
+.rich-text li[data-list] {
+  list-style: none;
+  position: relative;
+  padding-left: 1.5em;
+}
+
+.rich-text li[data-list="bullet"]::before {
+  content: "\2022";
+  position: absolute;
+  left: 0.4em;
+}
+
+.rich-text li[data-list="ordered"] {
+  counter-increment: rich-text-ordered;
+}
+
+.rich-text li[data-list="ordered"]::before {
+  content: counter(rich-text-ordered) ". ";
+  position: absolute;
+  left: 0;
+}
+
+.rich-text li[data-list="checked"]::before {
+  content: "\2611";
+  position: absolute;
+  left: 0.2em;
+}
+
+.rich-text li[data-list="unchecked"]::before {
+  content: "\2610";
+  position: absolute;
+  left: 0.2em;
+}
+
+/* Nested/indented lists and paragraphs, matching Quill's ql-indent-N classes. */
+.rich-text .ql-indent-1 { padding-left: 3em; }
+.rich-text .ql-indent-2 { padding-left: 4.5em; }
+.rich-text .ql-indent-3 { padding-left: 6em; }
+.rich-text .ql-indent-4 { padding-left: 7.5em; }
+.rich-text .ql-indent-5 { padding-left: 9em; }
+.rich-text .ql-indent-6 { padding-left: 10.5em; }
+.rich-text .ql-indent-7 { padding-left: 12em; }
+.rich-text .ql-indent-8 { padding-left: 13.5em; }
