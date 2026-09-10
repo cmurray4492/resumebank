@@ -1,0 +1,1 @@
+ALTER TABLE candidates ADD COLUMN phone TEXT NOT NULL DEFAULT '';

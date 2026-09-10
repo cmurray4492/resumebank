@@ -31,6 +31,7 @@ type Candidate struct {
 	State       string
 	Zipcode     string
 	Email       string
+	Phone       string
 	LinkedInURL string
 	Skills      string
 	Summary     string

@@ -93,6 +93,7 @@ func (h *AuthHandlers) SignupCandidate(w http.ResponseWriter, r *http.Request) {
 		State:       strings.TrimSpace(r.FormValue("state")),
 		Zipcode:     zipcode,
 		Email:       email,
+		Phone:       strings.TrimSpace(r.FormValue("phone")),
 		LinkedInURL: strings.TrimSpace(r.FormValue("linkedin_url")),
 		Skills:      strings.TrimSpace(r.FormValue("skills")),
 		Summary:     strings.TrimSpace(r.FormValue("summary")),

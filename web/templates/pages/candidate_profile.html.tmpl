@@ -16,7 +16,8 @@
   <dl class="row">
     {{if $c.City}}<dt class="col-sm-2">Location</dt><dd class="col-sm-10">{{$c.City}}{{if $c.State}}, {{$c.State}}{{end}} {{$c.Zipcode}}</dd>{{end}}
     <dt class="col-sm-2">Email</dt><dd class="col-sm-10">{{$c.Email}}</dd>
-    {{if $c.LinkedInURL}}<dt class="col-sm-2">LinkedIn</dt><dd class="col-sm-10"><a href="{{$c.LinkedInURL}}" rel="noopener">{{$c.LinkedInURL}}</a></dd>{{end}}
+    {{if $c.Phone}}<dt class="col-sm-2">Phone</dt><dd class="col-sm-10">{{$c.Phone}}</dd>{{end}}
+    {{if $c.LinkedInURL}}<dt class="col-sm-2">LinkedIn</dt><dd class="col-sm-10"><a href="{{$c.LinkedInURL}}" target="_blank" rel="noopener noreferrer">{{$c.LinkedInURL}}</a></dd>{{end}}
     {{if $c.Skills}}<dt class="col-sm-2">Skills</dt><dd class="col-sm-10">{{$c.Skills}}</dd>{{end}}
   </dl>
 

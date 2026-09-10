@@ -22,7 +22,7 @@ func scanCandidate(row pgx.Row) (*models.Candidate, error) {
 	c := &models.Candidate{}
 	err := row.Scan(
 		&c.ID, &c.UserID, &c.Slug, &c.Name, &c.Title, &c.City, &c.State, &c.Zipcode,
-		&c.Email, &c.LinkedInURL, &c.Skills, &c.Summary, &c.ResumeHTML, &c.ResumeText,
+		&c.Email, &c.Phone, &c.LinkedInURL, &c.Skills, &c.Summary, &c.ResumeHTML, &c.ResumeText,
 		&c.CreatedAt, &c.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -35,16 +35,16 @@ func scanCandidate(row pgx.Row) (*models.Candidate, error) {
 }
 
 const candidateColumns = `id, user_id, slug, name, title, city, state, zipcode,
-	email, linkedin_url, skills, summary, resume_html, resume_text, created_at, updated_at`
+	email, phone, linkedin_url, skills, summary, resume_html, resume_text, created_at, updated_at`
 
 func (r *CandidateRepo) Create(ctx context.Context, c *models.Candidate) (*models.Candidate, error) {
 	row := r.pool.QueryRow(ctx, `
 		INSERT INTO candidates (user_id, slug, name, title, city, state, zipcode,
-			email, linkedin_url, skills, summary, resume_html, resume_text)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+			email, phone, linkedin_url, skills, summary, resume_html, resume_text)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
 		RETURNING `+candidateColumns,
 		c.UserID, c.Slug, c.Name, c.Title, c.City, c.State, c.Zipcode,
-		c.Email, c.LinkedInURL, c.Skills, c.Summary, c.ResumeHTML, c.ResumeText,
+		c.Email, c.Phone, c.LinkedInURL, c.Skills, c.Summary, c.ResumeHTML, c.ResumeText,
 	)
 	return scanCandidate(row)
 }
@@ -53,12 +53,12 @@ func (r *CandidateRepo) Update(ctx context.Context, c *models.Candidate) (*model
 	row := r.pool.QueryRow(ctx, `
 		UPDATE candidates SET
 			name = $2, title = $3, city = $4, state = $5, zipcode = $6,
-			email = $7, linkedin_url = $8, skills = $9, summary = $10,
-			resume_html = $11, resume_text = $12, updated_at = now()
+			email = $7, phone = $8, linkedin_url = $9, skills = $10, summary = $11,
+			resume_html = $12, resume_text = $13, updated_at = now()
 		WHERE id = $1
 		RETURNING `+candidateColumns,
 		c.ID, c.Name, c.Title, c.City, c.State, c.Zipcode,
-		c.Email, c.LinkedInURL, c.Skills, c.Summary, c.ResumeHTML, c.ResumeText,
+		c.Email, c.Phone, c.LinkedInURL, c.Skills, c.Summary, c.ResumeHTML, c.ResumeText,
 	)
 	return scanCandidate(row)
 }
@@ -209,7 +209,7 @@ func (r *CandidateRepo) Search(ctx context.Context, query string, limit, offset 
 		var rank float32
 		if err := rows.Scan(
 			&c.ID, &c.UserID, &c.Slug, &c.Name, &c.Title, &c.City, &c.State, &c.Zipcode,
-			&c.Email, &c.LinkedInURL, &c.Skills, &c.Summary, &c.ResumeHTML, &c.ResumeText,
+			&c.Email, &c.Phone, &c.LinkedInURL, &c.Skills, &c.Summary, &c.ResumeHTML, &c.ResumeText,
 			&c.CreatedAt, &c.UpdatedAt, &rank,
 		); err != nil {
 			return nil, 0, err

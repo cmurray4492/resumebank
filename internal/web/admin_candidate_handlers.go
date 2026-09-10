@@ -106,6 +106,7 @@ func (h *AdminCandidateHandlers) Update(w http.ResponseWriter, r *http.Request) 
 	candidate.State = strings.TrimSpace(r.FormValue("state"))
 	candidate.Zipcode = zipcode
 	candidate.Email = email
+	candidate.Phone = strings.TrimSpace(r.FormValue("phone"))
 	candidate.LinkedInURL = strings.TrimSpace(r.FormValue("linkedin_url"))
 	candidate.Skills = strings.TrimSpace(r.FormValue("skills"))
 	candidate.Summary = strings.TrimSpace(r.FormValue("summary"))

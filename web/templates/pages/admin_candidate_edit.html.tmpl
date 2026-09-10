@@ -38,9 +38,15 @@
     {{with index .Errors "email"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
   </div>
 
-  <div class="mb-3">
-    <label class="form-label" for="linkedin_url">LinkedIn URL</label>
-    <input type="url" class="form-control" id="linkedin_url" name="linkedin_url" value="{{$c.LinkedInURL}}">
+  <div class="row">
+    <div class="mb-3 col-md-6">
+      <label class="form-label" for="phone">Phone</label>
+      <input type="tel" class="form-control" id="phone" name="phone" value="{{$c.Phone}}">
+    </div>
+    <div class="mb-3 col-md-6">
+      <label class="form-label" for="linkedin_url">LinkedIn URL</label>
+      <input type="url" class="form-control" id="linkedin_url" name="linkedin_url" value="{{$c.LinkedInURL}}">
+    </div>
   </div>
 
   <div class="mb-3">
