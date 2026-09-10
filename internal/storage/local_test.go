@@ -58,6 +58,20 @@ func TestValidateExtension(t *testing.T) {
 	}
 }
 
+func TestValidateImageExtension(t *testing.T) {
+	for _, ext := range []string{"png", "jpg", "jpeg", "gif", "webp"} {
+		if err := ValidateImageExtension("photo." + ext); err != nil {
+			t.Errorf("expected .%s to be valid, got %v", ext, err)
+		}
+	}
+	if err := ValidateImageExtension("resume.pdf"); err == nil {
+		t.Error("expected .pdf to be rejected as an image")
+	}
+	if err := ValidateImageExtension("script.svg"); err == nil {
+		t.Error("expected .svg to be rejected as an image")
+	}
+}
+
 func TestSafeFilename(t *testing.T) {
 	got := SafeFilename("../../etc/passwd")
 	if got == "../../etc/passwd" {

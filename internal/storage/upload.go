@@ -16,6 +16,20 @@ var additionalExts = map[string]bool{
 	".png": true, ".jpg": true, ".jpeg": true, ".txt": true,
 }
 
+var imageExts = map[string]bool{
+	".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".webp": true,
+}
+
+// ValidateImageExtension checks filename's extension against the allowlist
+// for profile pictures and company logos.
+func ValidateImageExtension(filename string) error {
+	ext := strings.ToLower(filepath.Ext(filename))
+	if !imageExts[ext] {
+		return fmt.Errorf("file type %q is not allowed", ext)
+	}
+	return nil
+}
+
 var unsafeChars = regexp.MustCompile(`[^a-zA-Z0-9._-]`)
 
 // ValidateExtension checks filename's extension against the allowlist for
@@ -46,4 +60,14 @@ func SafeFilename(original string) string {
 // CandidateFileKey builds the storage key for a candidate's uploaded file.
 func CandidateFileKey(candidateID int64, safeFilename string) string {
 	return fmt.Sprintf("candidates/%d/%s", candidateID, safeFilename)
+}
+
+// CandidatePhotoKey builds the storage key for a candidate's profile photo.
+func CandidatePhotoKey(candidateID int64, safeFilename string) string {
+	return fmt.Sprintf("candidates/%d/photo/%s", candidateID, safeFilename)
+}
+
+// EmployerLogoKey builds the storage key for an employer's company logo.
+func EmployerLogoKey(employerID int64, safeFilename string) string {
+	return fmt.Sprintf("employers/%d/logo/%s", employerID, safeFilename)
 }

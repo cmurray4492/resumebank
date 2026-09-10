@@ -19,14 +19,15 @@ func NewEmployerRepo(pool *pgxpool.Pool) *EmployerRepo {
 }
 
 const employerColumns = `id, user_id, slug, company_name, industry, city, state, zipcode,
-	phone, email_address, website, description, locations, created_at, updated_at`
+	phone, email_address, website, description, locations,
+	logo_path, logo_content_type, created_at, updated_at`
 
 func scanEmployer(row pgx.Row) (*models.Employer, error) {
 	e := &models.Employer{}
 	err := row.Scan(
 		&e.ID, &e.UserID, &e.Slug, &e.CompanyName, &e.Industry, &e.City, &e.State, &e.Zipcode,
 		&e.Phone, &e.EmailAddress, &e.Website, &e.Description, &e.Locations,
-		&e.CreatedAt, &e.UpdatedAt,
+		&e.LogoPath, &e.LogoContentType, &e.CreatedAt, &e.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -40,11 +41,12 @@ func scanEmployer(row pgx.Row) (*models.Employer, error) {
 func (r *EmployerRepo) Create(ctx context.Context, e *models.Employer) (*models.Employer, error) {
 	row := r.pool.QueryRow(ctx, `
 		INSERT INTO employers (user_id, slug, company_name, industry, city, state, zipcode,
-			phone, email_address, website, description, locations)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+			phone, email_address, website, description, locations, logo_path, logo_content_type)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
 		RETURNING `+employerColumns,
 		e.UserID, e.Slug, e.CompanyName, e.Industry, e.City, e.State, e.Zipcode,
 		e.Phone, e.EmailAddress, e.Website, e.Description, e.Locations,
+		e.LogoPath, e.LogoContentType,
 	)
 	return scanEmployer(row)
 }
@@ -54,13 +56,23 @@ func (r *EmployerRepo) Update(ctx context.Context, e *models.Employer) (*models.
 		UPDATE employers SET
 			company_name = $2, industry = $3, city = $4, state = $5, zipcode = $6,
 			phone = $7, email_address = $8, website = $9, description = $10, locations = $11,
-			updated_at = now()
+			logo_path = $12, logo_content_type = $13, updated_at = now()
 		WHERE id = $1
 		RETURNING `+employerColumns,
 		e.ID, e.CompanyName, e.Industry, e.City, e.State, e.Zipcode,
 		e.Phone, e.EmailAddress, e.Website, e.Description, e.Locations,
+		e.LogoPath, e.LogoContentType,
 	)
 	return scanEmployer(row)
+}
+
+// UpdateLogo sets just the employer's logo, independent of the full profile
+// edit form (see EmployerHandlers.UploadLogo/DeleteLogo).
+func (r *EmployerRepo) UpdateLogo(ctx context.Context, id int64, path, contentType string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE employers SET logo_path = $1, logo_content_type = $2, updated_at = now() WHERE id = $3`,
+		path, contentType, id)
+	return err
 }
 
 func (r *EmployerRepo) GetBySlug(ctx context.Context, slug string) (*models.Employer, error) {
@@ -100,7 +112,8 @@ func (r *EmployerRepo) ListAll(ctx context.Context, limit, offset int) ([]models
 	for rows.Next() {
 		var e models.Employer
 		if err := rows.Scan(&e.ID, &e.UserID, &e.Slug, &e.CompanyName, &e.Industry, &e.City, &e.State, &e.Zipcode,
-			&e.Phone, &e.EmailAddress, &e.Website, &e.Description, &e.Locations, &e.CreatedAt, &e.UpdatedAt); err != nil {
+			&e.Phone, &e.EmailAddress, &e.Website, &e.Description, &e.Locations,
+			&e.LogoPath, &e.LogoContentType, &e.CreatedAt, &e.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
 		employers = append(employers, e)

@@ -23,7 +23,7 @@ func scanCandidate(row pgx.Row) (*models.Candidate, error) {
 	err := row.Scan(
 		&c.ID, &c.UserID, &c.Slug, &c.Name, &c.Title, &c.City, &c.State, &c.Zipcode,
 		&c.Email, &c.Phone, &c.LinkedInURL, &c.Skills, &c.Summary, &c.ResumeHTML, &c.ResumeText,
-		&c.CreatedAt, &c.UpdatedAt,
+		&c.PhotoPath, &c.PhotoContentType, &c.CreatedAt, &c.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -35,16 +35,19 @@ func scanCandidate(row pgx.Row) (*models.Candidate, error) {
 }
 
 const candidateColumns = `id, user_id, slug, name, title, city, state, zipcode,
-	email, phone, linkedin_url, skills, summary, resume_html, resume_text, created_at, updated_at`
+	email, phone, linkedin_url, skills, summary, resume_html, resume_text,
+	photo_path, photo_content_type, created_at, updated_at`
 
 func (r *CandidateRepo) Create(ctx context.Context, c *models.Candidate) (*models.Candidate, error) {
 	row := r.pool.QueryRow(ctx, `
 		INSERT INTO candidates (user_id, slug, name, title, city, state, zipcode,
-			email, phone, linkedin_url, skills, summary, resume_html, resume_text)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+			email, phone, linkedin_url, skills, summary, resume_html, resume_text,
+			photo_path, photo_content_type)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
 		RETURNING `+candidateColumns,
 		c.UserID, c.Slug, c.Name, c.Title, c.City, c.State, c.Zipcode,
 		c.Email, c.Phone, c.LinkedInURL, c.Skills, c.Summary, c.ResumeHTML, c.ResumeText,
+		c.PhotoPath, c.PhotoContentType,
 	)
 	return scanCandidate(row)
 }
@@ -54,13 +57,24 @@ func (r *CandidateRepo) Update(ctx context.Context, c *models.Candidate) (*model
 		UPDATE candidates SET
 			name = $2, title = $3, city = $4, state = $5, zipcode = $6,
 			email = $7, phone = $8, linkedin_url = $9, skills = $10, summary = $11,
-			resume_html = $12, resume_text = $13, updated_at = now()
+			resume_html = $12, resume_text = $13, photo_path = $14, photo_content_type = $15,
+			updated_at = now()
 		WHERE id = $1
 		RETURNING `+candidateColumns,
 		c.ID, c.Name, c.Title, c.City, c.State, c.Zipcode,
 		c.Email, c.Phone, c.LinkedInURL, c.Skills, c.Summary, c.ResumeHTML, c.ResumeText,
+		c.PhotoPath, c.PhotoContentType,
 	)
 	return scanCandidate(row)
+}
+
+// UpdatePhoto sets just the candidate's profile photo, independent of the
+// full profile edit form (see CandidateHandlers.UploadPhoto/DeletePhoto).
+func (r *CandidateRepo) UpdatePhoto(ctx context.Context, id int64, path, contentType string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE candidates SET photo_path = $1, photo_content_type = $2, updated_at = now() WHERE id = $3`,
+		path, contentType, id)
+	return err
 }
 
 func (r *CandidateRepo) GetByID(ctx context.Context, id int64) (*models.Candidate, error) {
@@ -210,7 +224,7 @@ func (r *CandidateRepo) Search(ctx context.Context, query string, limit, offset 
 		if err := rows.Scan(
 			&c.ID, &c.UserID, &c.Slug, &c.Name, &c.Title, &c.City, &c.State, &c.Zipcode,
 			&c.Email, &c.Phone, &c.LinkedInURL, &c.Skills, &c.Summary, &c.ResumeHTML, &c.ResumeText,
-			&c.CreatedAt, &c.UpdatedAt, &rank,
+			&c.PhotoPath, &c.PhotoContentType, &c.CreatedAt, &c.UpdatedAt, &rank,
 		); err != nil {
 			return nil, 0, err
 		}

@@ -2,9 +2,14 @@
 {{$c := .Data.Candidate}}
 <article>
   <header class="d-flex justify-content-between align-items-start mb-3">
-    <div>
-      <h1>{{$c.Name}}</h1>
-      {{if $c.Title}}<p class="lead text-muted">{{$c.Title}}</p>{{end}}
+    <div class="d-flex align-items-center gap-3">
+      {{if $c.PhotoPath}}
+        <img src="/candidates/{{$c.Slug}}/photo" alt="{{$c.Name}}" class="rounded-circle" style="width: 96px; height: 96px; object-fit: cover;">
+      {{end}}
+      <div>
+        <h1>{{$c.Name}}</h1>
+        {{if $c.Title}}<p class="lead text-muted">{{$c.Title}}</p>{{end}}
+      </div>
     </div>
     {{if .Data.IsOwner}}
       <a class="btn btn-outline-primary" href="/candidates/{{$c.Slug}}/edit">Edit Profile</a>

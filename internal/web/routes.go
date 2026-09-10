@@ -58,6 +58,9 @@ func NewRouter(a *app.App) http.Handler {
 	mux.HandleFunc("GET /candidates/{slug}", candidateH.Show)
 	mux.HandleFunc("GET /candidates/{slug}/edit", a.Auth.RequireRole(models.RoleCandidate, candidateH.EditForm))
 	mux.HandleFunc("POST /candidates/{slug}/edit", a.Auth.RequireRole(models.RoleCandidate, candidateH.Update))
+	mux.HandleFunc("GET /candidates/{slug}/photo", candidateH.Photo)
+	mux.HandleFunc("POST /candidates/{slug}/photo", a.Auth.RequireRole(models.RoleCandidate, candidateH.UploadPhoto))
+	mux.HandleFunc("POST /candidates/{slug}/photo/delete", a.Auth.RequireRole(models.RoleCandidate, candidateH.DeletePhoto))
 	mux.HandleFunc("POST /candidates/{slug}/files", a.Auth.RequireRole(models.RoleCandidate, candidateH.UploadFile))
 	mux.HandleFunc("POST /candidates/{slug}/files/{fileID}/delete", a.Auth.RequireRole(models.RoleCandidate, candidateH.DeleteFile))
 
@@ -66,6 +69,9 @@ func NewRouter(a *app.App) http.Handler {
 	mux.HandleFunc("GET /employers/{slug}", employerH.Show)
 	mux.HandleFunc("GET /employers/{slug}/edit", a.Auth.RequireRole(models.RoleEmployer, employerH.EditForm))
 	mux.HandleFunc("POST /employers/{slug}/edit", a.Auth.RequireRole(models.RoleEmployer, employerH.Update))
+	mux.HandleFunc("GET /employers/{slug}/logo", employerH.Logo)
+	mux.HandleFunc("POST /employers/{slug}/logo", a.Auth.RequireRole(models.RoleEmployer, employerH.UploadLogo))
+	mux.HandleFunc("POST /employers/{slug}/logo/delete", a.Auth.RequireRole(models.RoleEmployer, employerH.DeleteLogo))
 	mux.HandleFunc("GET /employers/{slug}/jobs/new", a.Auth.RequireRole(models.RoleEmployer, jobH.NewForm))
 	mux.HandleFunc("POST /employers/{slug}/jobs", a.Auth.RequireRole(models.RoleEmployer, jobH.Create))
 

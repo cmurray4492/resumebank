@@ -22,41 +22,45 @@ type User struct {
 }
 
 type Candidate struct {
-	ID          int64
-	UserID      int64
-	Slug        string
-	Name        string
-	Title       string
-	City        string
-	State       string
-	Zipcode     string
-	Email       string
-	Phone       string
-	LinkedInURL string
-	Skills      string
-	Summary     string
-	ResumeHTML  string
-	ResumeText  string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID               int64
+	UserID           int64
+	Slug             string
+	Name             string
+	Title            string
+	City             string
+	State            string
+	Zipcode          string
+	Email            string
+	Phone            string
+	LinkedInURL      string
+	Skills           string
+	Summary          string
+	ResumeHTML       string
+	ResumeText       string
+	PhotoPath        string
+	PhotoContentType string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 type Employer struct {
-	ID           int64
-	UserID       int64
-	Slug         string
-	CompanyName  string
-	Industry     string
-	City         string
-	State        string
-	Zipcode      string
-	Phone        string
-	EmailAddress string
-	Website      string
-	Description  string
-	Locations    string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID              int64
+	UserID          int64
+	Slug            string
+	CompanyName     string
+	Industry        string
+	City            string
+	State           string
+	Zipcode         string
+	Phone           string
+	EmailAddress    string
+	Website         string
+	Description     string
+	Locations       string
+	LogoPath        string
+	LogoContentType string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type Job struct {

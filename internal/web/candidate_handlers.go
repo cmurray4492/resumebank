@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -218,6 +219,108 @@ func (h *CandidateHandlers) UploadFile(w http.ResponseWriter, r *http.Request) {
 		_ = h.App.Storage.Delete(key)
 		httpBadRequest(w, fmt.Errorf("could not save file record (a resume PDF may already exist): %w", err))
 		return
+	}
+
+	http.Redirect(w, r, "/candidates/"+candidate.Slug+"/edit", http.StatusSeeOther)
+}
+
+// Photo serves a candidate's profile photo inline, publicly.
+func (h *CandidateHandlers) Photo(w http.ResponseWriter, r *http.Request) {
+	slugVal := r.PathValue("slug")
+	candidate, err := h.App.Candidates.GetBySlug(r.Context(), slugVal)
+	if err != nil {
+		if err == repo.ErrNotFound {
+			httpx.NotFound(w, r)
+			return
+		}
+		httpServerError(w, err)
+		return
+	}
+	if candidate.PhotoPath == "" {
+		httpx.NotFound(w, r)
+		return
+	}
+
+	f, err := h.App.Storage.Open(candidate.PhotoPath)
+	if err != nil {
+		httpx.NotFound(w, r)
+		return
+	}
+	defer f.Close()
+
+	w.Header().Set("Content-Type", candidate.PhotoContentType)
+	w.Header().Set("Content-Disposition", "inline")
+	io.Copy(w, f)
+}
+
+func (h *CandidateHandlers) UploadPhoto(w http.ResponseWriter, r *http.Request) {
+	candidate, ok := h.loadOwnedCandidate(w, r)
+	if !ok {
+		return
+	}
+	if !h.App.Auth.VerifyCSRF(r) {
+		http.Error(w, "Invalid or missing CSRF token", http.StatusForbidden)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, h.App.Config.MaxUploadBytes)
+	if err := r.ParseMultipartForm(h.App.Config.MaxUploadBytes); err != nil {
+		httpBadRequest(w, fmt.Errorf("file too large or invalid form: %w", err))
+		return
+	}
+
+	file, header, err := r.FormFile("photo")
+	if err != nil {
+		httpBadRequest(w, err)
+		return
+	}
+	defer file.Close()
+
+	if err := storage.ValidateImageExtension(header.Filename); err != nil {
+		httpBadRequest(w, err)
+		return
+	}
+
+	safeName := storage.SafeFilename(header.Filename)
+	key := storage.CandidatePhotoKey(candidate.ID, safeName)
+	if err := h.App.Storage.Save(key, file); err != nil {
+		httpServerError(w, err)
+		return
+	}
+
+	contentType := header.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	oldPath := candidate.PhotoPath
+	if err := h.App.Candidates.UpdatePhoto(r.Context(), candidate.ID, key, contentType); err != nil {
+		_ = h.App.Storage.Delete(key)
+		httpServerError(w, err)
+		return
+	}
+	if oldPath != "" {
+		_ = h.App.Storage.Delete(oldPath)
+	}
+
+	http.Redirect(w, r, "/candidates/"+candidate.Slug+"/edit", http.StatusSeeOther)
+}
+
+func (h *CandidateHandlers) DeletePhoto(w http.ResponseWriter, r *http.Request) {
+	candidate, ok := h.loadOwnedCandidate(w, r)
+	if !ok {
+		return
+	}
+	if !h.App.Auth.VerifyCSRF(r) {
+		http.Error(w, "Invalid or missing CSRF token", http.StatusForbidden)
+		return
+	}
+
+	if candidate.PhotoPath != "" {
+		if err := h.App.Candidates.UpdatePhoto(r.Context(), candidate.ID, "", ""); err != nil {
+			httpServerError(w, err)
+			return
+		}
+		_ = h.App.Storage.Delete(candidate.PhotoPath)
 	}
 
 	http.Redirect(w, r, "/candidates/"+candidate.Slug+"/edit", http.StatusSeeOther)

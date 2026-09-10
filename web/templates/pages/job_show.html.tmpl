@@ -2,12 +2,17 @@
 {{$j := .Data.Job}}
 <article>
   <header class="d-flex justify-content-between align-items-start mb-3">
-    <div>
-      <h1>{{$j.Title}}</h1>
-      <p class="lead text-muted">
-        <a href="/employers/{{.Data.EmployerSlug}}">{{.Data.CompanyName}}</a>
-        {{if $j.Location}} &mdash; {{$j.Location}}{{end}}
-      </p>
+    <div class="d-flex align-items-center gap-3">
+      {{if .Data.EmployerHasLogo}}
+        <img src="/employers/{{.Data.EmployerSlug}}/logo" alt="{{.Data.CompanyName}} logo" style="width: 64px; height: 64px; object-fit: contain;">
+      {{end}}
+      <div>
+        <h1>{{$j.Title}}</h1>
+        <p class="lead text-muted">
+          <a href="/employers/{{.Data.EmployerSlug}}">{{.Data.CompanyName}}</a>
+          {{if $j.Location}} &mdash; {{$j.Location}}{{end}}
+        </p>
+      </div>
     </div>
     {{if .Data.IsOwner}}
       <div>

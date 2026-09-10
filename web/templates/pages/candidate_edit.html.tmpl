@@ -73,6 +73,33 @@
 
     <hr class="my-5">
 
+    <h2 class="h4">Profile Picture</h2>
+    <div class="d-flex align-items-center gap-3 mb-3">
+      {{if $c.PhotoPath}}
+        <img src="/candidates/{{$c.Slug}}/photo" alt="{{$c.Name}}" class="rounded-circle" style="width: 96px; height: 96px; object-fit: cover;">
+      {{else}}
+        <p class="text-muted mb-0">No profile picture uploaded yet.</p>
+      {{end}}
+    </div>
+    <form action="/candidates/{{$c.Slug}}/photo" method="post" enctype="multipart/form-data" class="row g-2 align-items-end mb-3">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <div class="col-auto">
+        <label class="form-label" for="photo_file">Upload Profile Picture</label>
+        <input type="file" class="form-control" id="photo_file" name="photo" accept=".png,.jpg,.jpeg,.gif,.webp" required>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary">Upload</button>
+      </div>
+    </form>
+    {{if $c.PhotoPath}}
+      <form action="/candidates/{{$c.Slug}}/photo/delete" method="post" class="mb-3">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <button type="submit" class="btn btn-sm btn-outline-danger">Remove Profile Picture</button>
+      </form>
+    {{end}}
+
+    <hr class="my-5">
+
     <h2 class="h4">Files</h2>
     <p class="text-muted">Upload your PDF resume (required) and up to 3 additional public files.</p>
     <ul class="list-group mb-3">
