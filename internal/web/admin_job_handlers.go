@@ -75,10 +75,14 @@ func (h *AdminJobHandlers) Update(w http.ResponseWriter, r *http.Request) {
 
 	title := strings.TrimSpace(r.FormValue("title"))
 	descriptionHTML := sanitize.SanitizeRichText(r.FormValue("description_html"))
+	applyMethod, applyValue, applyErrs := parseApplyFields(r)
 
 	errs := validate.FieldErrors{}
 	validate.Required(title, "title", errs)
 	validate.Required(descriptionHTML, "description_html", errs)
+	for field, msg := range applyErrs {
+		errs.Add(field, msg)
+	}
 
 	if errs.HasErrors() {
 		pd := newAdminPageData(h.App, w, r, "Edit Job", job)
@@ -97,6 +101,8 @@ func (h *AdminJobHandlers) Update(w http.ResponseWriter, r *http.Request) {
 	job.SalaryMax = optionalInt(strings.TrimSpace(r.FormValue("salary_max")))
 	job.DescriptionHTML = descriptionHTML
 	job.DescriptionText = newDescriptionText
+	job.ApplyMethod = applyMethod
+	job.ApplyValue = applyValue
 
 	updated, err := h.App.Jobs.Update(r.Context(), job)
 	if err != nil {

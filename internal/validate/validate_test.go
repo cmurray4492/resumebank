@@ -53,6 +53,28 @@ func TestZipcode(t *testing.T) {
 	}
 }
 
+func TestURL(t *testing.T) {
+	cases := []struct {
+		in    string
+		valid bool
+	}{
+		{"", true},
+		{"https://example.com/apply", true},
+		{"http://example.com", true},
+		{"ftp://example.com", false},
+		{"example.com", false},
+		{"not a url", false},
+		{"mailto:jobs@example.com", false},
+	}
+	for _, c := range cases {
+		errs := FieldErrors{}
+		URL(c.in, "apply_value", errs)
+		if got := !errs.HasErrors(); got != c.valid {
+			t.Errorf("URL(%q): valid=%v, want %v", c.in, got, c.valid)
+		}
+	}
+}
+
 func TestFieldErrorsAddDoesNotOverwrite(t *testing.T) {
 	errs := FieldErrors{}
 	errs.Add("email", "first error")

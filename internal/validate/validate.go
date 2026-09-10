@@ -2,6 +2,7 @@
 package validate
 
 import (
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -52,5 +53,15 @@ func Zipcode(value, field string, errs FieldErrors) {
 	}
 	if !zipRE.MatchString(value) {
 		errs.Add(field, "Enter a valid US zip code.")
+	}
+}
+
+func URL(value, field string, errs FieldErrors) {
+	if strings.TrimSpace(value) == "" {
+		return
+	}
+	u, err := url.Parse(value)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		errs.Add(field, "Enter a valid URL starting with http:// or https://.")
 	}
 }

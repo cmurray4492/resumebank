@@ -32,6 +32,7 @@ func TestVoteRepo_SetGetClearToggle(t *testing.T) {
 	job, err := jobs.Create(ctx, &models.Job{
 		EmployerID: employer.ID, Slug: "acme-role", Title: "Role",
 		DescriptionHTML: "<p>D</p>", DescriptionText: "D",
+		ApplyMethod: "url", ApplyValue: "https://acme.example.com/apply",
 	})
 	if err != nil {
 		t.Fatalf("creating job: %v", err)

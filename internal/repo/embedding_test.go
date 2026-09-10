@@ -74,6 +74,7 @@ func TestJobRepo_EmbeddingLifecycle(t *testing.T) {
 	job, err := jobs.Create(ctx, &models.Job{
 		EmployerID: employer.ID, Slug: "acme-engineer", Title: "Engineer",
 		DescriptionHTML: "<p>D</p>", DescriptionText: "Go backend role",
+		ApplyMethod: "url", ApplyValue: "https://acme.example.com/apply",
 	})
 	if err != nil {
 		t.Fatalf("Create: %v", err)

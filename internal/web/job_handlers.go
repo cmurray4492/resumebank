@@ -163,10 +163,14 @@ func (h *JobHandlers) Create(w http.ResponseWriter, r *http.Request) {
 
 	title := strings.TrimSpace(r.FormValue("title"))
 	descriptionHTML := sanitize.SanitizeRichText(r.FormValue("description_html"))
+	applyMethod, applyValue, applyErrs := parseApplyFields(r)
 
 	errs := validate.FieldErrors{}
 	validate.Required(title, "title", errs)
 	validate.Required(descriptionHTML, "description_html", errs)
+	for field, msg := range applyErrs {
+		errs.Add(field, msg)
+	}
 
 	if errs.HasErrors() {
 		pd := newPageData(h.App, w, r, "Post a Job", "", employer)
@@ -192,6 +196,8 @@ func (h *JobHandlers) Create(w http.ResponseWriter, r *http.Request) {
 		SalaryMax:       optionalInt(strings.TrimSpace(r.FormValue("salary_max"))),
 		DescriptionHTML: descriptionHTML,
 		DescriptionText: sanitize.PlainText(descriptionHTML),
+		ApplyMethod:     applyMethod,
+		ApplyValue:      applyValue,
 	}
 	created, err := h.App.Jobs.Create(r.Context(), job)
 	if err != nil {
@@ -227,10 +233,14 @@ func (h *JobHandlers) Update(w http.ResponseWriter, r *http.Request) {
 
 	title := strings.TrimSpace(r.FormValue("title"))
 	descriptionHTML := sanitize.SanitizeRichText(r.FormValue("description_html"))
+	applyMethod, applyValue, applyErrs := parseApplyFields(r)
 
 	errs := validate.FieldErrors{}
 	validate.Required(title, "title", errs)
 	validate.Required(descriptionHTML, "description_html", errs)
+	for field, msg := range applyErrs {
+		errs.Add(field, msg)
+	}
 
 	if errs.HasErrors() {
 		pd := newPageData(h.App, w, r, "Edit Job Posting", "", job)
@@ -249,6 +259,8 @@ func (h *JobHandlers) Update(w http.ResponseWriter, r *http.Request) {
 	job.SalaryMax = optionalInt(strings.TrimSpace(r.FormValue("salary_max")))
 	job.DescriptionHTML = descriptionHTML
 	job.DescriptionText = newDescriptionText
+	job.ApplyMethod = applyMethod
+	job.ApplyValue = applyValue
 
 	updated, err := h.App.Jobs.Update(r.Context(), job)
 	if err != nil {
@@ -335,4 +347,24 @@ func (h *JobHandlers) loadOwnedJob(w http.ResponseWriter, r *http.Request) (*mod
 
 func (h *JobHandlers) employerForJob(r *http.Request, job *models.Job) (*models.Employer, error) {
 	return h.App.Employers.GetByID(r.Context(), job.EmployerID)
+}
+
+// parseApplyFields reads and validates the job posting's apply method
+// (a URL or an email address) shared by the employer and admin job forms.
+func parseApplyFields(r *http.Request) (method, value string, errs validate.FieldErrors) {
+	errs = validate.FieldErrors{}
+	method = r.FormValue("apply_method")
+	value = strings.TrimSpace(r.FormValue("apply_value"))
+
+	if method != "url" && method != "email" {
+		errs.Add("apply_method", "Choose how candidates should apply.")
+		return method, value, errs
+	}
+	validate.Required(value, "apply_value", errs)
+	if method == "url" {
+		validate.URL(value, "apply_value", errs)
+	} else {
+		validate.Email(value, "apply_value", errs)
+	}
+	return method, value, errs
 }

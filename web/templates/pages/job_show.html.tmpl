@@ -24,7 +24,27 @@
     <dt class="col-sm-2">Posted</dt><dd class="col-sm-10">{{formatDate $j.DatePosted}}</dd>
     {{if $j.JobNumber}}<dt class="col-sm-2">Job Number</dt><dd class="col-sm-10">{{$j.JobNumber}}</dd>{{end}}
     <dt class="col-sm-2">Salary</dt><dd class="col-sm-10">{{formatSalary $j.SalaryMin $j.SalaryMax}}</dd>
+    {{if $j.ApplyValue}}
+      <dt class="col-sm-2">Apply</dt>
+      <dd class="col-sm-10">
+        {{if eq $j.ApplyMethod "email"}}
+          <a href="mailto:{{$j.ApplyValue}}">{{$j.ApplyValue}}</a>
+        {{else}}
+          <a href="{{$j.ApplyValue}}" target="_blank" rel="noopener noreferrer">{{$j.ApplyValue}}</a>
+        {{end}}
+      </dd>
+    {{end}}
   </dl>
+
+  {{if $j.ApplyValue}}
+    <div class="mb-4">
+      {{if eq $j.ApplyMethod "email"}}
+        <a class="btn btn-primary" href="mailto:{{$j.ApplyValue}}">Apply via Email</a>
+      {{else}}
+        <a class="btn btn-primary" href="{{$j.ApplyValue}}" target="_blank" rel="noopener noreferrer">Apply Now</a>
+      {{end}}
+    </div>
+  {{end}}
 
   <h2 class="h5">Description</h2>
   <div class="rich-text border rounded p-3 bg-white mb-4">{{safeHTML $j.DescriptionHTML}}</div>

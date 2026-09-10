@@ -34,6 +34,25 @@
   </div>
 
   <div class="mb-3">
+    <label class="form-label d-block">How should candidates apply? *</label>
+    <div class="form-check form-check-inline">
+      <input class="form-check-input" type="radio" name="apply_method" id="apply_method_url" value="url" {{if ne $j.ApplyMethod "email"}}checked{{end}}>
+      <label class="form-check-label" for="apply_method_url">Application URL</label>
+    </div>
+    <div class="form-check form-check-inline">
+      <input class="form-check-input" type="radio" name="apply_method" id="apply_method_email" value="email" {{if eq $j.ApplyMethod "email"}}checked{{end}}>
+      <label class="form-check-label" for="apply_method_email">Email Address</label>
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label" for="apply_value">Application URL or Email *</label>
+    <input type="text" class="form-control {{if index .Errors "apply_value"}}is-invalid{{end}}" id="apply_value" name="apply_value" value="{{$j.ApplyValue}}" placeholder="https://example.com/apply or jobs@company.com" required>
+    {{with index .Errors "apply_value"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+    {{with index .Errors "apply_method"}}<div class="text-danger small">{{.}}</div>{{end}}
+  </div>
+
+  <div class="mb-3">
     <label class="form-label">Description *</label>
     <div id="job-description-editor" style="height: 250px;"></div>
     <textarea name="description_html" id="description_html" hidden>{{$j.DescriptionHTML}}</textarea>

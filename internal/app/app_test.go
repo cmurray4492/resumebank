@@ -76,6 +76,7 @@ func TestRefreshSitemap_IncludesAllEntities(t *testing.T) {
 	if _, err := a.Jobs.Create(ctx, &models.Job{
 		EmployerID: employer.ID, Slug: "acme-engineer", Title: "Engineer",
 		DescriptionHTML: "<p>D</p>", DescriptionText: "D",
+		ApplyMethod: "url", ApplyValue: "https://acme.example.com/apply",
 	}); err != nil {
 		t.Fatalf("creating job: %v", err)
 	}

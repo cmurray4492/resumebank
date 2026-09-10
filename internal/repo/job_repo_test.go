@@ -33,6 +33,7 @@ func TestJobRepo_CreateSearchDelete(t *testing.T) {
 	job, err := jobs.Create(ctx, &models.Job{
 		EmployerID: e.ID, Slug: "acme-inc-backend-engineer", Title: "Backend Engineer",
 		DescriptionHTML: "<p>Build Go services</p>", DescriptionText: "Build Go services",
+		ApplyMethod: "url", ApplyValue: "https://acme.example.com/apply",
 	})
 	if err != nil {
 		t.Fatalf("Create: %v", err)

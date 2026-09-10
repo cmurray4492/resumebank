@@ -70,6 +70,8 @@ type Job struct {
 	SalaryMax       *int
 	DescriptionHTML string
 	DescriptionText string
+	ApplyMethod     string
+	ApplyValue      string
 	DatePosted      time.Time
 	CreatedAt       time.Time
 	UpdatedAt       time.Time

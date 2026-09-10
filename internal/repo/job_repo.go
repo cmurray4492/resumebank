@@ -19,14 +19,14 @@ func NewJobRepo(pool *pgxpool.Pool) *JobRepo {
 }
 
 const jobColumns = `id, employer_id, slug, title, location, job_number, salary_min, salary_max,
-	description_html, description_text, date_posted, created_at, updated_at`
+	description_html, description_text, apply_method, apply_value, date_posted, created_at, updated_at`
 
 func scanJob(row pgx.Row) (*models.Job, error) {
 	j := &models.Job{}
 	err := row.Scan(
 		&j.ID, &j.EmployerID, &j.Slug, &j.Title, &j.Location, &j.JobNumber,
 		&j.SalaryMin, &j.SalaryMax, &j.DescriptionHTML, &j.DescriptionText,
-		&j.DatePosted, &j.CreatedAt, &j.UpdatedAt,
+		&j.ApplyMethod, &j.ApplyValue, &j.DatePosted, &j.CreatedAt, &j.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -40,11 +40,11 @@ func scanJob(row pgx.Row) (*models.Job, error) {
 func (r *JobRepo) Create(ctx context.Context, j *models.Job) (*models.Job, error) {
 	row := r.pool.QueryRow(ctx, `
 		INSERT INTO jobs (employer_id, slug, title, location, job_number, salary_min, salary_max,
-			description_html, description_text)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+			description_html, description_text, apply_method, apply_value)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 		RETURNING `+jobColumns,
 		j.EmployerID, j.Slug, j.Title, j.Location, j.JobNumber, j.SalaryMin, j.SalaryMax,
-		j.DescriptionHTML, j.DescriptionText,
+		j.DescriptionHTML, j.DescriptionText, j.ApplyMethod, j.ApplyValue,
 	)
 	return scanJob(row)
 }
@@ -53,11 +53,11 @@ func (r *JobRepo) Update(ctx context.Context, j *models.Job) (*models.Job, error
 	row := r.pool.QueryRow(ctx, `
 		UPDATE jobs SET
 			title = $2, location = $3, job_number = $4, salary_min = $5, salary_max = $6,
-			description_html = $7, description_text = $8, updated_at = now()
+			description_html = $7, description_text = $8, apply_method = $9, apply_value = $10, updated_at = now()
 		WHERE id = $1
 		RETURNING `+jobColumns,
 		j.ID, j.Title, j.Location, j.JobNumber, j.SalaryMin, j.SalaryMax,
-		j.DescriptionHTML, j.DescriptionText,
+		j.DescriptionHTML, j.DescriptionText, j.ApplyMethod, j.ApplyValue,
 	)
 	return scanJob(row)
 }
@@ -186,7 +186,7 @@ func scanJobRows(rows pgx.Rows) (*models.Job, error) {
 	err := rows.Scan(
 		&j.ID, &j.EmployerID, &j.Slug, &j.Title, &j.Location, &j.JobNumber,
 		&j.SalaryMin, &j.SalaryMax, &j.DescriptionHTML, &j.DescriptionText,
-		&j.DatePosted, &j.CreatedAt, &j.UpdatedAt,
+		&j.ApplyMethod, &j.ApplyValue, &j.DatePosted, &j.CreatedAt, &j.UpdatedAt,
 	)
 	return j, err
 }
@@ -238,7 +238,8 @@ func (r *JobRepo) Search(ctx context.Context, query string, limit, offset int) (
 		if err := rows.Scan(
 			&j.ID, &j.EmployerID, &j.Slug, &j.Title, &j.Location, &j.JobNumber,
 			&j.SalaryMin, &j.SalaryMax, &j.DescriptionHTML, &j.DescriptionText,
-			&j.DatePosted, &j.CreatedAt, &j.UpdatedAt, &companyName, &employerSlug, &rank,
+			&j.ApplyMethod, &j.ApplyValue, &j.DatePosted, &j.CreatedAt, &j.UpdatedAt,
+			&companyName, &employerSlug, &rank,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -252,5 +253,5 @@ func (r *JobRepo) Search(ctx context.Context, query string, limit, offset int) (
 // slug/created_at/updated_at columns that would otherwise be ambiguous).
 func jobColumnsAliased() string {
 	return `j.id, j.employer_id, j.slug, j.title, j.location, j.job_number, j.salary_min, j.salary_max,
-		j.description_html, j.description_text, j.date_posted, j.created_at, j.updated_at`
+		j.description_html, j.description_text, j.apply_method, j.apply_value, j.date_posted, j.created_at, j.updated_at`
 }
