@@ -31,7 +31,7 @@ type jobView struct {
 	CurrentVote           int16 // +1, -1, or 0 (no vote); only meaningful when CanVote
 	ShareURL              string
 	ShareTitle            string
-	RecommendedCandidates []repo.CandidateMatch
+	RecommendedCandidates []candidateMatchResult
 }
 
 func (h *JobHandlers) Show(w http.ResponseWriter, r *http.Request) {
@@ -85,7 +85,7 @@ func (h *JobHandlers) Show(w http.ResponseWriter, r *http.Request) {
 			httpServerError(w, err)
 			return
 		}
-		view.RecommendedCandidates = recommended
+		view.RecommendedCandidates = explainCandidateMatches(recommended, job.DescriptionText)
 	}
 	desc := job.Title + " at " + emp.CompanyName
 	if job.Location != "" {

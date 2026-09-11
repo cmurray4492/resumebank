@@ -28,7 +28,7 @@ type candidateProfileView struct {
 	Candidate       *models.Candidate
 	Files           []models.CandidateFile
 	IsOwner         bool
-	RecommendedJobs []repo.JobMatch
+	RecommendedJobs []jobMatchResult
 }
 
 func (h *CandidateHandlers) Show(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +60,7 @@ func (h *CandidateHandlers) Show(w http.ResponseWriter, r *http.Request) {
 			httpServerError(w, err)
 			return
 		}
-		view.RecommendedJobs = recommended
+		view.RecommendedJobs = explainJobMatches(recommended, candidate.Skills)
 	}
 	desc := candidate.Summary
 	if desc == "" {

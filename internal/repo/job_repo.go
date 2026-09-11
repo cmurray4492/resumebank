@@ -112,12 +112,13 @@ func (r *JobRepo) MissingEmbeddings(ctx context.Context, limit int) ([]Embedding
 }
 
 type JobMatch struct {
-	Slug         string
-	Title        string
-	CompanyName  string
-	EmployerSlug string
-	Location     string
-	Similarity   float64
+	Slug            string
+	Title           string
+	CompanyName     string
+	EmployerSlug    string
+	Location        string
+	DescriptionText string
+	Similarity      float64
 }
 
 // MatchByEmbedding returns the jobs most similar to queryVector (see
@@ -128,7 +129,7 @@ type JobMatch struct {
 // ruled themselves out.
 func (r *JobRepo) MatchByEmbedding(ctx context.Context, queryVector string, limit int, location string, minSalary *int) ([]JobMatch, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT j.slug, j.title, e.company_name, e.slug, j.location, 1 - (j.embedding <=> $1::vector) AS similarity
+		SELECT j.slug, j.title, e.company_name, e.slug, j.location, j.description_text, 1 - (j.embedding <=> $1::vector) AS similarity
 		FROM jobs j JOIN employers e ON e.id = j.employer_id
 		WHERE j.embedding IS NOT NULL
 			AND ($3 = '' OR j.location ILIKE '%' || $3 || '%')
@@ -143,7 +144,7 @@ func (r *JobRepo) MatchByEmbedding(ctx context.Context, queryVector string, limi
 	var matches []JobMatch
 	for rows.Next() {
 		var m JobMatch
-		if err := rows.Scan(&m.Slug, &m.Title, &m.CompanyName, &m.EmployerSlug, &m.Location, &m.Similarity); err != nil {
+		if err := rows.Scan(&m.Slug, &m.Title, &m.CompanyName, &m.EmployerSlug, &m.Location, &m.DescriptionText, &m.Similarity); err != nil {
 			return nil, err
 		}
 		matches = append(matches, m)
@@ -157,7 +158,7 @@ func (r *JobRepo) MatchByEmbedding(ctx context.Context, queryVector string, limi
 // (not an error) if either embedding isn't computed yet.
 func (r *JobRepo) RecommendedForCandidate(ctx context.Context, candidateID int64, limit int) ([]JobMatch, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT j.slug, j.title, e.company_name, e.slug, j.location, 1 - (j.embedding <=> c.embedding) AS similarity
+		SELECT j.slug, j.title, e.company_name, e.slug, j.location, j.description_text, 1 - (j.embedding <=> c.embedding) AS similarity
 		FROM jobs j JOIN employers e ON e.id = j.employer_id, candidates c
 		WHERE c.id = $1 AND j.embedding IS NOT NULL AND c.embedding IS NOT NULL
 		ORDER BY j.embedding <=> c.embedding
@@ -170,7 +171,7 @@ func (r *JobRepo) RecommendedForCandidate(ctx context.Context, candidateID int64
 	var matches []JobMatch
 	for rows.Next() {
 		var m JobMatch
-		if err := rows.Scan(&m.Slug, &m.Title, &m.CompanyName, &m.EmployerSlug, &m.Location, &m.Similarity); err != nil {
+		if err := rows.Scan(&m.Slug, &m.Title, &m.CompanyName, &m.EmployerSlug, &m.Location, &m.DescriptionText, &m.Similarity); err != nil {
 			return nil, err
 		}
 		matches = append(matches, m)

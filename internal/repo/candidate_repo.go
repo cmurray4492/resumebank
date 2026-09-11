@@ -133,6 +133,7 @@ type CandidateMatch struct {
 	Title      string
 	City       string
 	State      string
+	Skills     string
 	Similarity float64
 }
 
@@ -142,7 +143,7 @@ type CandidateMatch struct {
 // state.
 func (r *CandidateRepo) MatchByEmbedding(ctx context.Context, queryVector string, limit int, location string) ([]CandidateMatch, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT slug, name, title, city, state, 1 - (embedding <=> $1::vector) AS similarity
+		SELECT slug, name, title, city, state, skills, 1 - (embedding <=> $1::vector) AS similarity
 		FROM candidates
 		WHERE embedding IS NOT NULL
 			AND ($3 = '' OR city ILIKE '%' || $3 || '%' OR state ILIKE '%' || $3 || '%')
@@ -156,7 +157,7 @@ func (r *CandidateRepo) MatchByEmbedding(ctx context.Context, queryVector string
 	var matches []CandidateMatch
 	for rows.Next() {
 		var m CandidateMatch
-		if err := rows.Scan(&m.Slug, &m.Name, &m.Title, &m.City, &m.State, &m.Similarity); err != nil {
+		if err := rows.Scan(&m.Slug, &m.Name, &m.Title, &m.City, &m.State, &m.Skills, &m.Similarity); err != nil {
 			return nil, err
 		}
 		matches = append(matches, m)
@@ -170,7 +171,7 @@ func (r *CandidateRepo) MatchByEmbedding(ctx context.Context, queryVector string
 // (not an error) if either embedding isn't computed yet.
 func (r *CandidateRepo) RecommendedForJob(ctx context.Context, jobID int64, limit int) ([]CandidateMatch, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT c.slug, c.name, c.title, c.city, c.state, 1 - (c.embedding <=> j.embedding) AS similarity
+		SELECT c.slug, c.name, c.title, c.city, c.state, c.skills, 1 - (c.embedding <=> j.embedding) AS similarity
 		FROM candidates c, jobs j
 		WHERE j.id = $1 AND c.embedding IS NOT NULL AND j.embedding IS NOT NULL
 		ORDER BY c.embedding <=> j.embedding
@@ -183,7 +184,7 @@ func (r *CandidateRepo) RecommendedForJob(ctx context.Context, jobID int64, limi
 	var matches []CandidateMatch
 	for rows.Next() {
 		var m CandidateMatch
-		if err := rows.Scan(&m.Slug, &m.Name, &m.Title, &m.City, &m.State, &m.Similarity); err != nil {
+		if err := rows.Scan(&m.Slug, &m.Name, &m.Title, &m.City, &m.State, &m.Skills, &m.Similarity); err != nil {
 			return nil, err
 		}
 		matches = append(matches, m)

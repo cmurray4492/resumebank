@@ -6,6 +6,7 @@ import (
 
 	"resumebank/internal/app"
 	"resumebank/internal/embeddings"
+	"resumebank/internal/matching"
 	"resumebank/internal/repo"
 	"resumebank/internal/validate"
 )
@@ -23,12 +24,31 @@ func NewMatchHandlers(a *app.App) *MatchHandlers { return &MatchHandlers{App: a}
 const matchResultLimit = 15
 const matchMaxInputLen = 20000
 
+// candidateMatchResult pairs a candidate match with the subset of their
+// declared Skills found in the job description text, so results show why
+// they were suggested and not just a bare similarity score.
+type candidateMatchResult struct {
+	repo.CandidateMatch
+	MatchedSkills []string
+}
+
+func explainCandidateMatches(results []repo.CandidateMatch, jobDescription string) []candidateMatchResult {
+	explained := make([]candidateMatchResult, len(results))
+	for i, r := range results {
+		explained[i] = candidateMatchResult{
+			CandidateMatch: r,
+			MatchedSkills:  matching.OverlappingSkills(r.Skills, jobDescription),
+		}
+	}
+	return explained
+}
+
 type candidateMatchView struct {
 	JobDescription string
 	Location       string
 	Searched       bool
 	Unavailable    bool
-	Results        []repo.CandidateMatch
+	Results        []candidateMatchResult
 }
 
 func (h *MatchHandlers) CandidateMatchForm(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +84,7 @@ func (h *MatchHandlers) MatchCandidates(w http.ResponseWriter, r *http.Request) 
 				httpServerError(w, err)
 				return
 			}
-			view.Results = results
+			view.Results = explainCandidateMatches(results, jobDescription)
 		}
 	}
 
@@ -73,13 +93,33 @@ func (h *MatchHandlers) MatchCandidates(w http.ResponseWriter, r *http.Request) 
 	h.App.Renderer.Render(w, http.StatusOK, "match_candidates.html.tmpl", pd)
 }
 
+// jobMatchResult pairs a job match with the subset of the searching
+// candidate's declared Skills found in that job's description text, so
+// results show why they were suggested and not just a bare similarity
+// score.
+type jobMatchResult struct {
+	repo.JobMatch
+	MatchedSkills []string
+}
+
+func explainJobMatches(results []repo.JobMatch, candidateSkills string) []jobMatchResult {
+	explained := make([]jobMatchResult, len(results))
+	for i, r := range results {
+		explained[i] = jobMatchResult{
+			JobMatch:      r,
+			MatchedSkills: matching.OverlappingSkills(candidateSkills, r.DescriptionText),
+		}
+	}
+	return explained
+}
+
 type jobMatchView struct {
 	Resume      string
 	Location    string
 	MinSalary   string
 	Searched    bool
 	Unavailable bool
-	Results     []repo.JobMatch
+	Results     []jobMatchResult
 }
 
 func (h *MatchHandlers) JobMatchForm(w http.ResponseWriter, r *http.Request) {
@@ -116,7 +156,13 @@ func (h *MatchHandlers) MatchJobs(w http.ResponseWriter, r *http.Request) {
 				httpServerError(w, err)
 				return
 			}
-			view.Results = results
+			var candidateSkills string
+			if u := currentUser(r); u != nil {
+				if candidate, err := h.App.Candidates.GetByUserID(r.Context(), u.ID); err == nil {
+					candidateSkills = candidate.Skills
+				}
+			}
+			view.Results = explainJobMatches(results, candidateSkills)
 		}
 	}
 

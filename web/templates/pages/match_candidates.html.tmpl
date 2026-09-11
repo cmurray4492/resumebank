@@ -34,9 +34,17 @@
       {{range .Data.Results}}
         <li class="list-group-item d-flex justify-content-between align-items-center">
           <div>
-            <a href="/candidates/{{.Slug}}">{{.Name}}</a>
-            {{if .Title}}<span class="text-muted"> &mdash; {{.Title}}</span>{{end}}
-            {{if .City}}<span class="text-muted"> &mdash; {{.City}}{{if .State}}, {{.State}}{{end}}</span>{{end}}
+            <div>
+              <a href="/candidates/{{.Slug}}">{{.Name}}</a>
+              {{if .Title}}<span class="text-muted"> &mdash; {{.Title}}</span>{{end}}
+              {{if .City}}<span class="text-muted"> &mdash; {{.City}}{{if .State}}, {{.State}}{{end}}</span>{{end}}
+            </div>
+            {{if .MatchedSkills}}
+              <div class="mt-1">
+                <span class="text-muted small">Matched on:</span>
+                {{range .MatchedSkills}}<span class="badge bg-light text-dark border me-1">{{.}}</span>{{end}}
+              </div>
+            {{end}}
           </div>
           <span class="badge bg-primary rounded-pill">{{matchPercent .Similarity}}</span>
         </li>

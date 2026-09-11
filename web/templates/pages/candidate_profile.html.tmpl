@@ -66,8 +66,16 @@
       {{range .Data.RecommendedJobs}}
         <li class="list-group-item d-flex justify-content-between align-items-center">
           <div>
-            <a href="/jobs/{{.Slug}}">{{.Title}}</a>
-            <span class="text-muted"> at <a href="/employers/{{.EmployerSlug}}">{{.CompanyName}}</a>{{if .Location}} &mdash; {{.Location}}{{end}}</span>
+            <div>
+              <a href="/jobs/{{.Slug}}">{{.Title}}</a>
+              <span class="text-muted"> at <a href="/employers/{{.EmployerSlug}}">{{.CompanyName}}</a>{{if .Location}} &mdash; {{.Location}}{{end}}</span>
+            </div>
+            {{if .MatchedSkills}}
+              <div class="mt-1">
+                <span class="text-muted small">Matched on:</span>
+                {{range .MatchedSkills}}<span class="badge bg-light text-dark border me-1">{{.}}</span>{{end}}
+              </div>
+            {{end}}
           </div>
           <span class="badge bg-primary rounded-pill">{{matchPercent .Similarity}}</span>
         </li>
