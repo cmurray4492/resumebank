@@ -180,13 +180,11 @@ func identicalEmbeddingVector() string {
 	return "[" + strings.Join(vector, ",") + "]"
 }
 
-func TestJobRepo_RankingFavorsRecencyAndVotesOnTiedSimilarity(t *testing.T) {
+func TestJobRepo_RankingFavorsRecencyOnTiedSimilarity(t *testing.T) {
 	pool := testutil.OpenTestDB(t)
 	users := repo.NewUserRepo(pool)
 	employers := repo.NewEmployerRepo(pool)
 	jobs := repo.NewJobRepo(pool)
-	candidates := repo.NewCandidateRepo(pool)
-	votes := repo.NewVoteRepo(pool)
 	ctx := context.Background()
 
 	employerUser := newTestUser(t, users, "acme@example.com", models.RoleEmployer)
@@ -234,9 +232,48 @@ func TestJobRepo_RankingFavorsRecencyAndVotesOnTiedSimilarity(t *testing.T) {
 	if results[0].Similarity < 0.99 || results[1].Similarity < 0.99 {
 		t.Fatalf("expected both jobs to have near-1.0 similarity (tied), got %+v", results)
 	}
+}
 
-	// Now give the older job enough net upvotes to overcome the newer job's
-	// recency edge and reclaim first place.
+func TestJobRepo_RankingFavorsVotesOnTiedSimilarityAndRecency(t *testing.T) {
+	pool := testutil.OpenTestDB(t)
+	users := repo.NewUserRepo(pool)
+	employers := repo.NewEmployerRepo(pool)
+	jobs := repo.NewJobRepo(pool)
+	candidates := repo.NewCandidateRepo(pool)
+	votes := repo.NewVoteRepo(pool)
+	ctx := context.Background()
+
+	employerUser := newTestUser(t, users, "acme@example.com", models.RoleEmployer)
+	employer := newTestEmployer(t, employers, employerUser.ID, "acme", "Acme")
+
+	// Both jobs are created back-to-back, so their date_posted values are
+	// (for ranking purposes) tied - isolating this test to the vote signal
+	// alone, unlike the recency test above.
+	upvoted, err := jobs.Create(ctx, &models.Job{
+		EmployerID: employer.ID, Slug: "upvoted-job", Title: "Upvoted Job",
+		DescriptionHTML: "<p>D</p>", DescriptionText: "Go backend role",
+		ApplyMethod: "url", ApplyValue: "https://acme.example.com/apply",
+	})
+	if err != nil {
+		t.Fatalf("Create upvoted job: %v", err)
+	}
+	unvoted, err := jobs.Create(ctx, &models.Job{
+		EmployerID: employer.ID, Slug: "unvoted-job", Title: "Unvoted Job",
+		DescriptionHTML: "<p>D</p>", DescriptionText: "Go backend role",
+		ApplyMethod: "url", ApplyValue: "https://acme.example.com/apply",
+	})
+	if err != nil {
+		t.Fatalf("Create unvoted job: %v", err)
+	}
+
+	vectorLiteral := identicalEmbeddingVector()
+	if err := jobs.SetEmbedding(ctx, upvoted.ID, vectorLiteral); err != nil {
+		t.Fatalf("SetEmbedding upvoted: %v", err)
+	}
+	if err := jobs.SetEmbedding(ctx, unvoted.ID, vectorLiteral); err != nil {
+		t.Fatalf("SetEmbedding unvoted: %v", err)
+	}
+
 	voterUser := newTestUser(t, users, "voter@example.com", models.RoleCandidate)
 	voter, err := candidates.Create(ctx, &models.Candidate{
 		UserID: voterUser.ID, Slug: "voter", Name: "Voter", Zipcode: "12345",
@@ -245,16 +282,16 @@ func TestJobRepo_RankingFavorsRecencyAndVotesOnTiedSimilarity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create voter candidate: %v", err)
 	}
-	if err := votes.Set(ctx, voter.ID, older.ID, 1); err != nil {
+	if err := votes.Set(ctx, voter.ID, upvoted.ID, 1); err != nil {
 		t.Fatalf("Set vote: %v", err)
 	}
 
-	results, err = jobs.MatchByEmbedding(ctx, vectorLiteral, 5, "", nil)
+	results, err := jobs.MatchByEmbedding(ctx, vectorLiteral, 5, "", nil)
 	if err != nil {
-		t.Fatalf("MatchByEmbedding after voting: %v", err)
+		t.Fatalf("MatchByEmbedding: %v", err)
 	}
-	if len(results) != 2 || results[0].Slug != "older-job" {
-		t.Fatalf("expected older-job to reclaim first place after an upvote, got %+v", results)
+	if len(results) != 2 || results[0].Slug != "upvoted-job" {
+		t.Fatalf("expected upvoted-job to rank first with tied similarity and recency, got %+v", results)
 	}
 }
 
