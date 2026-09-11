@@ -137,17 +137,34 @@ type CandidateMatch struct {
 	Similarity float64
 }
 
+// candidateRankingExpr blends raw cosine similarity with profile recency
+// into a single ranking score (higher is better), used only in ORDER BY -
+// the Similarity field returned to callers stays the pure cosine similarity
+// so the displayed match percentage remains an honest, undiluted number.
+// Weights: 85% similarity, 15% recency (profiles updated in the last ~30
+// days get a meaningful boost, decaying smoothly for older ones). alias
+// must be the table alias (or "" for an unaliased query) prefixing
+// "embedding"/"updated_at".
+func candidateRankingExpr(alias, vectorParam string) string {
+	col := alias
+	if col != "" {
+		col += "."
+	}
+	return `(0.85 * (1 - (` + col + `embedding <=> ` + vectorParam + `))
+		+ 0.15 * exp(-extract(epoch from (now() - ` + col + `updated_at)) / 86400.0 / 30.0))`
+}
+
 // MatchByEmbedding returns the candidates most similar to queryVector (see
-// embeddings.FormatVector), most similar first. location, if non-empty, is
-// matched as a case-insensitive substring against the candidate's city or
-// state.
+// embeddings.FormatVector), ranked by a blend of similarity and profile
+// recency (see candidateRankingExpr). location, if non-empty, is matched as
+// a case-insensitive substring against the candidate's city or state.
 func (r *CandidateRepo) MatchByEmbedding(ctx context.Context, queryVector string, limit int, location string) ([]CandidateMatch, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT slug, name, title, city, state, skills, 1 - (embedding <=> $1::vector) AS similarity
 		FROM candidates
 		WHERE embedding IS NOT NULL
 			AND ($3 = '' OR city ILIKE '%' || $3 || '%' OR state ILIKE '%' || $3 || '%')
-		ORDER BY embedding <=> $1::vector
+		ORDER BY `+candidateRankingExpr("", "$1::vector")+` DESC
 		LIMIT $2`, queryVector, limit, location)
 	if err != nil {
 		return nil, err
@@ -166,15 +183,17 @@ func (r *CandidateRepo) MatchByEmbedding(ctx context.Context, queryVector string
 }
 
 // RecommendedForJob returns the candidates most similar to jobID's own
-// description embedding, for the automatic "Recommended Candidates" panel
-// shown to a job's owner - no pasted text required. Returns an empty slice
-// (not an error) if either embedding isn't computed yet.
+// description embedding, ranked by a blend of similarity and profile
+// recency (see candidateRankingExpr), for the automatic "Recommended
+// Candidates" panel shown to a job's owner - no pasted text required.
+// Returns an empty slice (not an error) if either embedding isn't computed
+// yet.
 func (r *CandidateRepo) RecommendedForJob(ctx context.Context, jobID int64, limit int) ([]CandidateMatch, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT c.slug, c.name, c.title, c.city, c.state, c.skills, 1 - (c.embedding <=> j.embedding) AS similarity
 		FROM candidates c, jobs j
 		WHERE j.id = $1 AND c.embedding IS NOT NULL AND j.embedding IS NOT NULL
-		ORDER BY c.embedding <=> j.embedding
+		ORDER BY `+candidateRankingExpr("c", "j.embedding")+` DESC
 		LIMIT $2`, jobID, limit)
 	if err != nil {
 		return nil, err

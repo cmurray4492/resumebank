@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -121,8 +122,22 @@ type JobMatch struct {
 	Similarity      float64
 }
 
+// jobRankingExpr blends raw cosine similarity with posting recency and net
+// community votes into a single ranking score (higher is better), used only
+// in ORDER BY - the Similarity field returned to callers stays the pure
+// cosine similarity so the displayed match percentage remains an honest,
+// undiluted number. Weights: 70% similarity, 15% recency (jobs posted in
+// the last ~30 days get a meaningful boost, decaying smoothly for older
+// ones), 15% votes (net up/down votes squashed through a sigmoid so a
+// handful of votes can't dominate similarity, and jobs with zero votes
+// score a neutral 0.5 rather than being penalized).
+const jobRankingExpr = `(0.7 * (1 - (j.embedding <=> %s))
+	+ 0.15 * exp(-extract(epoch from (now() - j.date_posted)) / 86400.0 / 30.0)
+	+ 0.15 * (1.0 / (1.0 + exp(-coalesce((SELECT sum(vote) FROM job_votes WHERE job_id = j.id), 0) / 3.0))))`
+
 // MatchByEmbedding returns the jobs most similar to queryVector (see
-// embeddings.FormatVector), most similar first. location, if non-empty, is
+// embeddings.FormatVector), ranked by a blend of similarity, posting
+// recency, and net votes (see jobRankingExpr). location, if non-empty, is
 // matched as a case-insensitive substring against the job's location.
 // minSalary, if non-nil, excludes jobs whose posted salary_max is below it;
 // jobs with no salary_max specified are always included since they haven't
@@ -134,7 +149,7 @@ func (r *JobRepo) MatchByEmbedding(ctx context.Context, queryVector string, limi
 		WHERE j.embedding IS NOT NULL
 			AND ($3 = '' OR j.location ILIKE '%' || $3 || '%')
 			AND ($4::int IS NULL OR j.salary_max IS NULL OR j.salary_max >= $4)
-		ORDER BY j.embedding <=> $1::vector
+		ORDER BY `+fmt.Sprintf(jobRankingExpr, "$1::vector")+` DESC
 		LIMIT $2`, queryVector, limit, location, minSalary)
 	if err != nil {
 		return nil, err
@@ -153,15 +168,17 @@ func (r *JobRepo) MatchByEmbedding(ctx context.Context, queryVector string, limi
 }
 
 // RecommendedForCandidate returns the jobs most similar to candidateID's own
-// resume embedding, for the automatic "Recommended Jobs" panel shown on a
-// candidate's own profile - no pasted text required. Returns an empty slice
-// (not an error) if either embedding isn't computed yet.
+// resume embedding, ranked by a blend of similarity, posting recency, and
+// net votes (see jobRankingExpr), for the automatic "Recommended Jobs"
+// panel shown on a candidate's own profile - no pasted text required.
+// Returns an empty slice (not an error) if either embedding isn't computed
+// yet.
 func (r *JobRepo) RecommendedForCandidate(ctx context.Context, candidateID int64, limit int) ([]JobMatch, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT j.slug, j.title, e.company_name, e.slug, j.location, j.description_text, 1 - (j.embedding <=> c.embedding) AS similarity
 		FROM jobs j JOIN employers e ON e.id = j.employer_id, candidates c
 		WHERE c.id = $1 AND j.embedding IS NOT NULL AND c.embedding IS NOT NULL
-		ORDER BY j.embedding <=> c.embedding
+		ORDER BY `+fmt.Sprintf(jobRankingExpr, "c.embedding")+` DESC
 		LIMIT $2`, candidateID, limit)
 	if err != nil {
 		return nil, err

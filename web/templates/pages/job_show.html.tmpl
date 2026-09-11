@@ -68,9 +68,9 @@
   {{if and .Data.IsOwner .Data.RecommendedCandidates}}
     <h2 class="h5 mt-4">Recommended Candidates</h2>
     <div class="alert alert-warning small">
-      This feature is in development. Results are based on semantic similarity between this job's
-      description and candidates' resumes, computed by a local AI model &mdash; they're suggestions,
-      not guarantees. Only visible to you.
+      This feature is in development. Results are ranked by a blend of semantic similarity (computed
+      by a local AI model) and profile recency &mdash; they're suggestions, not guarantees. Only
+      visible to you.
     </div>
     <ul class="list-group mb-3" style="max-width: 700px;">
       {{range .Data.RecommendedCandidates}}
