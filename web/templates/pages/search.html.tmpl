@@ -26,9 +26,18 @@
   {{if .Data.JobHits}}
     <ul class="list-group mb-4">
       {{range .Data.JobHits}}
-        <li class="list-group-item">
-          <a href="/jobs/{{.Job.Slug}}">{{.Job.Title}}</a>
-          <span class="text-muted"> at {{.CompanyName}}{{if .Job.Location}} &mdash; {{.Job.Location}}{{end}}</span>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <a href="/jobs/{{.Job.Slug}}">{{.Job.Title}}</a>
+            <span class="text-muted"> at {{.CompanyName}}{{if .Job.Location}} &mdash; {{.Job.Location}}{{end}}</span>
+          </div>
+          {{if .Job.ApplyValue}}
+            {{if eq .Job.ApplyMethod "email"}}
+              <a class="btn btn-sm btn-primary flex-shrink-0 ms-2" href="mailto:{{.Job.ApplyValue}}">Apply</a>
+            {{else}}
+              <a class="btn btn-sm btn-primary flex-shrink-0 ms-2" href="{{.Job.ApplyValue}}" target="_blank" rel="noopener noreferrer">Apply</a>
+            {{end}}
+          {{end}}
         </li>
       {{end}}
     </ul>
