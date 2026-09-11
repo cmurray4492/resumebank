@@ -151,6 +151,33 @@ func (r *JobRepo) MatchByEmbedding(ctx context.Context, queryVector string, limi
 	return matches, rows.Err()
 }
 
+// RecommendedForCandidate returns the jobs most similar to candidateID's own
+// resume embedding, for the automatic "Recommended Jobs" panel shown on a
+// candidate's own profile - no pasted text required. Returns an empty slice
+// (not an error) if either embedding isn't computed yet.
+func (r *JobRepo) RecommendedForCandidate(ctx context.Context, candidateID int64, limit int) ([]JobMatch, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT j.slug, j.title, e.company_name, e.slug, j.location, 1 - (j.embedding <=> c.embedding) AS similarity
+		FROM jobs j JOIN employers e ON e.id = j.employer_id, candidates c
+		WHERE c.id = $1 AND j.embedding IS NOT NULL AND c.embedding IS NOT NULL
+		ORDER BY j.embedding <=> c.embedding
+		LIMIT $2`, candidateID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var matches []JobMatch
+	for rows.Next() {
+		var m JobMatch
+		if err := rows.Scan(&m.Slug, &m.Title, &m.CompanyName, &m.EmployerSlug, &m.Location, &m.Similarity); err != nil {
+			return nil, err
+		}
+		matches = append(matches, m)
+	}
+	return matches, rows.Err()
+}
+
 // ListSlugs returns every job's slug and last-updated time, for building
 // the sitemap.
 func (r *JobRepo) ListSlugs(ctx context.Context) ([]SitemapEntry, error) {

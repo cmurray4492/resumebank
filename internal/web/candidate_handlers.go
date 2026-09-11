@@ -22,10 +22,13 @@ type CandidateHandlers struct {
 
 func NewCandidateHandlers(a *app.App) *CandidateHandlers { return &CandidateHandlers{App: a} }
 
+const recommendationLimit = 5
+
 type candidateProfileView struct {
-	Candidate *models.Candidate
-	Files     []models.CandidateFile
-	IsOwner   bool
+	Candidate       *models.Candidate
+	Files           []models.CandidateFile
+	IsOwner         bool
+	RecommendedJobs []repo.JobMatch
 }
 
 func (h *CandidateHandlers) Show(w http.ResponseWriter, r *http.Request) {
@@ -50,6 +53,14 @@ func (h *CandidateHandlers) Show(w http.ResponseWriter, r *http.Request) {
 		Candidate: candidate,
 		Files:     files,
 		IsOwner:   u != nil && u.ID == candidate.UserID,
+	}
+	if view.IsOwner {
+		recommended, err := h.App.Jobs.RecommendedForCandidate(r.Context(), candidate.ID, recommendationLimit)
+		if err != nil {
+			httpServerError(w, err)
+			return
+		}
+		view.RecommendedJobs = recommended
 	}
 	desc := candidate.Summary
 	if desc == "" {

@@ -20,17 +20,18 @@ type JobHandlers struct {
 func NewJobHandlers(a *app.App) *JobHandlers { return &JobHandlers{App: a} }
 
 type jobView struct {
-	Job             *models.Job
-	CompanyName     string
-	EmployerSlug    string
-	EmployerHasLogo bool
-	IsOwner         bool
-	UpVotes         int
-	DownVotes       int
-	CanVote         bool
-	CurrentVote     int16 // +1, -1, or 0 (no vote); only meaningful when CanVote
-	ShareURL        string
-	ShareTitle      string
+	Job                   *models.Job
+	CompanyName           string
+	EmployerSlug          string
+	EmployerHasLogo       bool
+	IsOwner               bool
+	UpVotes               int
+	DownVotes             int
+	CanVote               bool
+	CurrentVote           int16 // +1, -1, or 0 (no vote); only meaningful when CanVote
+	ShareURL              string
+	ShareTitle            string
+	RecommendedCandidates []repo.CandidateMatch
 }
 
 func (h *JobHandlers) Show(w http.ResponseWriter, r *http.Request) {
@@ -77,6 +78,14 @@ func (h *JobHandlers) Show(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+	}
+	if view.IsOwner {
+		recommended, err := h.App.Candidates.RecommendedForJob(r.Context(), job.ID, recommendationLimit)
+		if err != nil {
+			httpServerError(w, err)
+			return
+		}
+		view.RecommendedCandidates = recommended
 	}
 	desc := job.Title + " at " + emp.CompanyName
 	if job.Location != "" {

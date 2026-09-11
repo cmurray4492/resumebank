@@ -65,6 +65,27 @@
     {{end}}
   </div>
 
+  {{if and .Data.IsOwner .Data.RecommendedCandidates}}
+    <h2 class="h5 mt-4">Recommended Candidates</h2>
+    <div class="alert alert-warning small">
+      This feature is in development. Results are based on semantic similarity between this job's
+      description and candidates' resumes, computed by a local AI model &mdash; they're suggestions,
+      not guarantees. Only visible to you.
+    </div>
+    <ul class="list-group mb-3" style="max-width: 700px;">
+      {{range .Data.RecommendedCandidates}}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <a href="/candidates/{{.Slug}}">{{.Name}}</a>
+            {{if .Title}}<span class="text-muted"> &mdash; {{.Title}}</span>{{end}}
+            {{if .City}}<span class="text-muted"> &mdash; {{.City}}{{if .State}}, {{.State}}{{end}}</span>{{end}}
+          </div>
+          <span class="badge bg-primary rounded-pill">{{matchPercent .Similarity}}</span>
+        </li>
+      {{end}}
+    </ul>
+  {{end}}
+
   <div class="mt-4 pt-3 border-top">{{template "share_buttons.html.tmpl" .}}</div>
 </article>
 {{end}}
