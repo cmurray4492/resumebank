@@ -15,6 +15,16 @@
       id="resume" name="resume" rows="8" required>{{.Data.Resume}}</textarea>
     {{with index .Errors "resume"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
   </div>
+  <div class="row">
+    <div class="mb-3 col-md-4">
+      <label class="form-label" for="location">Location (optional)</label>
+      <input type="text" class="form-control" id="location" name="location" value="{{.Data.Location}}" placeholder="City or state">
+    </div>
+    <div class="mb-3 col-md-4">
+      <label class="form-label" for="min_salary">Minimum Salary (optional)</label>
+      <input type="number" class="form-control" id="min_salary" name="min_salary" min="0" value="{{.Data.MinSalary}}">
+    </div>
+  </div>
   <button type="submit" class="btn btn-primary">Find Matching Jobs</button>
 </form>
 
@@ -31,7 +41,7 @@
         <li class="list-group-item d-flex justify-content-between align-items-center">
           <div>
             <a href="/jobs/{{.Slug}}">{{.Title}}</a>
-            <span class="text-muted"> at <a href="/employers/{{.EmployerSlug}}">{{.CompanyName}}</a></span>
+            <span class="text-muted"> at <a href="/employers/{{.EmployerSlug}}">{{.CompanyName}}</a>{{if .Location}} &mdash; {{.Location}}{{end}}</span>
           </div>
           <span class="badge bg-primary rounded-pill">{{matchPercent .Similarity}}</span>
         </li>

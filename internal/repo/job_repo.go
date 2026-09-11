@@ -116,18 +116,25 @@ type JobMatch struct {
 	Title        string
 	CompanyName  string
 	EmployerSlug string
+	Location     string
 	Similarity   float64
 }
 
 // MatchByEmbedding returns the jobs most similar to queryVector (see
-// embeddings.FormatVector), most similar first.
-func (r *JobRepo) MatchByEmbedding(ctx context.Context, queryVector string, limit int) ([]JobMatch, error) {
+// embeddings.FormatVector), most similar first. location, if non-empty, is
+// matched as a case-insensitive substring against the job's location.
+// minSalary, if non-nil, excludes jobs whose posted salary_max is below it;
+// jobs with no salary_max specified are always included since they haven't
+// ruled themselves out.
+func (r *JobRepo) MatchByEmbedding(ctx context.Context, queryVector string, limit int, location string, minSalary *int) ([]JobMatch, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT j.slug, j.title, e.company_name, e.slug, 1 - (j.embedding <=> $1::vector) AS similarity
+		SELECT j.slug, j.title, e.company_name, e.slug, j.location, 1 - (j.embedding <=> $1::vector) AS similarity
 		FROM jobs j JOIN employers e ON e.id = j.employer_id
 		WHERE j.embedding IS NOT NULL
+			AND ($3 = '' OR j.location ILIKE '%' || $3 || '%')
+			AND ($4::int IS NULL OR j.salary_max IS NULL OR j.salary_max >= $4)
 		ORDER BY j.embedding <=> $1::vector
-		LIMIT $2`, queryVector, limit)
+		LIMIT $2`, queryVector, limit, location, minSalary)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +143,7 @@ func (r *JobRepo) MatchByEmbedding(ctx context.Context, queryVector string, limi
 	var matches []JobMatch
 	for rows.Next() {
 		var m JobMatch
-		if err := rows.Scan(&m.Slug, &m.Title, &m.CompanyName, &m.EmployerSlug, &m.Similarity); err != nil {
+		if err := rows.Scan(&m.Slug, &m.Title, &m.CompanyName, &m.EmployerSlug, &m.Location, &m.Similarity); err != nil {
 			return nil, err
 		}
 		matches = append(matches, m)

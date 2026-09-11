@@ -50,7 +50,7 @@ func TestCandidateRepo_EmbeddingLifecycle(t *testing.T) {
 		t.Fatalf("expected no candidates missing an embedding after SetEmbedding, got %+v", missing)
 	}
 
-	matches, err := candidates.MatchByEmbedding(ctx, vectorLiteral, 5)
+	matches, err := candidates.MatchByEmbedding(ctx, vectorLiteral, 5, "")
 	if err != nil {
 		t.Fatalf("MatchByEmbedding: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestJobRepo_EmbeddingLifecycle(t *testing.T) {
 		t.Fatalf("SetEmbedding: %v", err)
 	}
 
-	matches, err := jobs.MatchByEmbedding(ctx, vectorLiteral, 5)
+	matches, err := jobs.MatchByEmbedding(ctx, vectorLiteral, 5, "", nil)
 	if err != nil {
 		t.Fatalf("MatchByEmbedding: %v", err)
 	}

@@ -15,6 +15,10 @@
       id="job_description" name="job_description" rows="8" required>{{.Data.JobDescription}}</textarea>
     {{with index .Errors "job_description"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
   </div>
+  <div class="mb-3" style="max-width: 300px;">
+    <label class="form-label" for="location">Candidate Location (optional)</label>
+    <input type="text" class="form-control" id="location" name="location" value="{{.Data.Location}}" placeholder="City or state">
+  </div>
   <button type="submit" class="btn btn-primary">Find Matching Candidates</button>
 </form>
 
@@ -32,6 +36,7 @@
           <div>
             <a href="/candidates/{{.Slug}}">{{.Name}}</a>
             {{if .Title}}<span class="text-muted"> &mdash; {{.Title}}</span>{{end}}
+            {{if .City}}<span class="text-muted"> &mdash; {{.City}}{{if .State}}, {{.State}}{{end}}</span>{{end}}
           </div>
           <span class="badge bg-primary rounded-pill">{{matchPercent .Similarity}}</span>
         </li>

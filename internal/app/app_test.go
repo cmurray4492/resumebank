@@ -170,7 +170,7 @@ func TestEmbeddings_EndToEndMatchQuality(t *testing.T) {
 		t.Fatalf("EmbedQuery: %v", err)
 	}
 
-	matches, err := a.Candidates.MatchByEmbedding(ctx, embeddings.FormatVector(queryVector), 5)
+	matches, err := a.Candidates.MatchByEmbedding(ctx, embeddings.FormatVector(queryVector), 5, "")
 	if err != nil {
 		t.Fatalf("MatchByEmbedding: %v", err)
 	}

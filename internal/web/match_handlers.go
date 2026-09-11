@@ -25,6 +25,7 @@ const matchMaxInputLen = 20000
 
 type candidateMatchView struct {
 	JobDescription string
+	Location       string
 	Searched       bool
 	Unavailable    bool
 	Results        []repo.CandidateMatch
@@ -46,18 +47,19 @@ func (h *MatchHandlers) MatchCandidates(w http.ResponseWriter, r *http.Request) 
 	}
 
 	jobDescription := strings.TrimSpace(r.FormValue("job_description"))
+	location := strings.TrimSpace(r.FormValue("location"))
 	errs := validate.FieldErrors{}
 	validate.Required(jobDescription, "job_description", errs)
 	validate.MaxLen(jobDescription, "job_description", matchMaxInputLen, errs)
 
-	view := candidateMatchView{JobDescription: jobDescription, Searched: true}
+	view := candidateMatchView{JobDescription: jobDescription, Location: location, Searched: true}
 
 	if !errs.HasErrors() {
 		vector, err := h.App.Embeddings.EmbedQuery(r.Context(), jobDescription)
 		if err != nil {
 			view.Unavailable = true
 		} else {
-			results, err := h.App.Candidates.MatchByEmbedding(r.Context(), embeddings.FormatVector(vector), matchResultLimit)
+			results, err := h.App.Candidates.MatchByEmbedding(r.Context(), embeddings.FormatVector(vector), matchResultLimit, location)
 			if err != nil {
 				httpServerError(w, err)
 				return
@@ -73,6 +75,8 @@ func (h *MatchHandlers) MatchCandidates(w http.ResponseWriter, r *http.Request) 
 
 type jobMatchView struct {
 	Resume      string
+	Location    string
+	MinSalary   string
 	Searched    bool
 	Unavailable bool
 	Results     []repo.JobMatch
@@ -94,18 +98,20 @@ func (h *MatchHandlers) MatchJobs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resume := strings.TrimSpace(r.FormValue("resume"))
+	location := strings.TrimSpace(r.FormValue("location"))
+	minSalaryStr := strings.TrimSpace(r.FormValue("min_salary"))
 	errs := validate.FieldErrors{}
 	validate.Required(resume, "resume", errs)
 	validate.MaxLen(resume, "resume", matchMaxInputLen, errs)
 
-	view := jobMatchView{Resume: resume, Searched: true}
+	view := jobMatchView{Resume: resume, Location: location, MinSalary: minSalaryStr, Searched: true}
 
 	if !errs.HasErrors() {
 		vector, err := h.App.Embeddings.EmbedQuery(r.Context(), resume)
 		if err != nil {
 			view.Unavailable = true
 		} else {
-			results, err := h.App.Jobs.MatchByEmbedding(r.Context(), embeddings.FormatVector(vector), matchResultLimit)
+			results, err := h.App.Jobs.MatchByEmbedding(r.Context(), embeddings.FormatVector(vector), matchResultLimit, location, optionalInt(minSalaryStr))
 			if err != nil {
 				httpServerError(w, err)
 				return

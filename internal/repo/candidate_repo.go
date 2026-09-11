@@ -131,18 +131,23 @@ type CandidateMatch struct {
 	Slug       string
 	Name       string
 	Title      string
+	City       string
+	State      string
 	Similarity float64
 }
 
-// MatchByEmbedding returns the candidates most similar to queryVector
-// (see embeddings.FormatVector), most similar first.
-func (r *CandidateRepo) MatchByEmbedding(ctx context.Context, queryVector string, limit int) ([]CandidateMatch, error) {
+// MatchByEmbedding returns the candidates most similar to queryVector (see
+// embeddings.FormatVector), most similar first. location, if non-empty, is
+// matched as a case-insensitive substring against the candidate's city or
+// state.
+func (r *CandidateRepo) MatchByEmbedding(ctx context.Context, queryVector string, limit int, location string) ([]CandidateMatch, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT slug, name, title, 1 - (embedding <=> $1::vector) AS similarity
+		SELECT slug, name, title, city, state, 1 - (embedding <=> $1::vector) AS similarity
 		FROM candidates
 		WHERE embedding IS NOT NULL
+			AND ($3 = '' OR city ILIKE '%' || $3 || '%' OR state ILIKE '%' || $3 || '%')
 		ORDER BY embedding <=> $1::vector
-		LIMIT $2`, queryVector, limit)
+		LIMIT $2`, queryVector, limit, location)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +156,7 @@ func (r *CandidateRepo) MatchByEmbedding(ctx context.Context, queryVector string
 	var matches []CandidateMatch
 	for rows.Next() {
 		var m CandidateMatch
-		if err := rows.Scan(&m.Slug, &m.Name, &m.Title, &m.Similarity); err != nil {
+		if err := rows.Scan(&m.Slug, &m.Name, &m.Title, &m.City, &m.State, &m.Similarity); err != nil {
 			return nil, err
 		}
 		matches = append(matches, m)
