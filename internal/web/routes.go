@@ -62,6 +62,7 @@ func NewRouter(a *app.App) http.Handler {
 	mux.HandleFunc("GET /candidates/{slug}/photo", candidateH.Photo)
 	mux.HandleFunc("POST /candidates/{slug}/photo", a.Auth.RequireRole(models.RoleCandidate, candidateH.UploadPhoto))
 	mux.HandleFunc("POST /candidates/{slug}/photo/delete", a.Auth.RequireRole(models.RoleCandidate, candidateH.DeletePhoto))
+	mux.HandleFunc("POST /candidates/resume/extract", candidateH.ExtractResume)
 	mux.HandleFunc("POST /candidates/{slug}/files", a.Auth.RequireRole(models.RoleCandidate, candidateH.UploadFile))
 	mux.HandleFunc("POST /candidates/{slug}/files/{fileID}/delete", a.Auth.RequireRole(models.RoleCandidate, candidateH.DeleteFile))
 
