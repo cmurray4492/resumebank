@@ -1,7 +1,10 @@
 package web
 
 import (
+	"bytes"
+	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"strings"
 
@@ -11,6 +14,7 @@ import (
 	"resumebank/internal/repo"
 	"resumebank/internal/sanitize"
 	"resumebank/internal/slug"
+	"resumebank/internal/storage"
 	"resumebank/internal/validate"
 )
 
@@ -30,7 +34,8 @@ func (h *AuthHandlers) SignupCandidate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid or missing CSRF token", http.StatusForbidden)
 		return
 	}
-	if err := r.ParseForm(); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, h.App.Config.MaxUploadBytes)
+	if err := r.ParseMultipartForm(h.App.Config.MaxUploadBytes); err != nil {
 		httpBadRequest(w, err)
 		return
 	}
@@ -53,6 +58,22 @@ func (h *AuthHandlers) SignupCandidate(w http.ResponseWriter, r *http.Request) {
 	validate.Zipcode(zipcode, "zipcode", errs)
 	validate.Required(zipcode, "zipcode", errs)
 	validate.Required(resumeHTML, "resume_html", errs)
+
+	var resumePDFData []byte
+	var resumePDFHeader *multipart.FileHeader
+	if file, header, ferr := r.FormFile("resume_pdf"); ferr != nil {
+		errs.Add("resume_pdf", "Please upload your resume as a PDF.")
+	} else {
+		defer file.Close()
+		if err := storage.ValidateExtension(header.Filename, true); err != nil {
+			errs.Add("resume_pdf", "Please upload your resume as a PDF file.")
+		} else if data, err := io.ReadAll(file); err != nil {
+			errs.Add("resume_pdf", "Could not read the uploaded file.")
+		} else {
+			resumePDFData = data
+			resumePDFHeader = header
+		}
+	}
 
 	if errs.HasErrors() {
 		h.rerenderCandidateSignup(w, r, errs)
@@ -108,6 +129,35 @@ func (h *AuthHandlers) SignupCandidate(w http.ResponseWriter, r *http.Request) {
 		httpServerError(w, err)
 		return
 	}
+
+	safeName := storage.SafeFilename(resumePDFHeader.Filename)
+	key := storage.CandidateFileKey(created.ID, safeName)
+	if err := h.App.Storage.Save(key, bytes.NewReader(resumePDFData)); err != nil {
+		// Compensate for the orphaned user/candidate rows; Phase 1 doesn't
+		// wrap this in a DB transaction since repos operate on the shared
+		// pool directly.
+		log.Printf("resume PDF storage save failed after candidate creation, candidate id=%d: %v", created.ID, err)
+		httpServerError(w, err)
+		return
+	}
+	contentType := resumePDFHeader.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "application/pdf"
+	}
+	if _, err := h.App.Files.Create(r.Context(), &models.CandidateFile{
+		CandidateID:      created.ID,
+		Kind:             models.FileKindResumePDF,
+		OriginalFilename: resumePDFHeader.Filename,
+		StoredPath:       key,
+		ContentType:      contentType,
+		SizeBytes:        int64(len(resumePDFData)),
+	}); err != nil {
+		_ = h.App.Storage.Delete(key)
+		log.Printf("resume PDF file record creation failed after candidate creation, candidate id=%d: %v", created.ID, err)
+		httpServerError(w, err)
+		return
+	}
+
 	h.App.TriggerCandidateEmbedding(created.ID, created.ResumeText)
 
 	h.startSession(w, r, user.ID)

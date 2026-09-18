@@ -32,4 +32,6 @@ function initRichTextEditor(containerId, hiddenInputId) {
       hiddenInput.value = quill.root.innerHTML;
     });
   }
+
+  return quill;
 }

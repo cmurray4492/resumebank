@@ -63,6 +63,11 @@
 
       <div class="mb-3">
         <label class="form-label">Resume *</label>
+        <div class="mb-2">
+          <label class="form-label" for="resume_file">Auto-fill from a PDF or DOCX resume (optional)</label>
+          <input type="file" class="form-control" id="resume_file" accept=".pdf,.docx">
+          <div id="resume_extract_status" class="form-text"></div>
+        </div>
         <div id="resume-editor" style="height: 250px;"></div>
         <textarea name="resume_html" id="resume_html" hidden>{{$c.ResumeHTML}}</textarea>
         {{with index .Errors "resume_html"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
@@ -145,6 +150,7 @@
 
 {{define "scripts"}}
 <script>
-  initRichTextEditor('resume-editor', 'resume_html');
+  var resumeQuill = initRichTextEditor('resume-editor', 'resume_html');
+  initResumeExtractUpload('resume_file', 'resume_extract_status', resumeQuill, {{$c.Slug}});
 </script>
 {{end}}

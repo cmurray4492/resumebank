@@ -2,7 +2,7 @@
 <div class="row justify-content-center">
   <div class="col-md-8">
     <h1 class="h3 mb-4">Create a Candidate Account</h1>
-    <form method="post" action="/signup/candidate" novalidate>
+    <form method="post" action="/signup/candidate" enctype="multipart/form-data" novalidate>
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
       <div class="row">
@@ -70,9 +70,21 @@
 
       <div class="mb-3">
         <label class="form-label">Resume *</label>
+        <div class="mb-2">
+          <label class="form-label" for="resume_file">Auto-fill from a PDF or DOCX resume (optional)</label>
+          <input type="file" class="form-control" id="resume_file" accept=".pdf,.docx">
+          <div id="resume_extract_status" class="form-text">This just fills in the text below - you'll still upload your resume PDF further down.</div>
+        </div>
         <div id="resume-editor" style="height: 250px;"></div>
         <textarea name="resume_html" id="resume_html" hidden></textarea>
         {{with index .Errors "resume_html"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="resume_pdf_file">Resume PDF *</label>
+        <input type="file" class="form-control {{if index .Errors "resume_pdf"}}is-invalid{{end}}" id="resume_pdf_file" name="resume_pdf" accept=".pdf" required>
+        <div class="form-text">Employers can download this file from your profile.</div>
+        {{with index .Errors "resume_pdf"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
       </div>
 
       <button type="submit" class="btn btn-primary">Create Account</button>
@@ -88,6 +100,7 @@
 
 {{define "scripts"}}
 <script>
-  initRichTextEditor('resume-editor', 'resume_html');
+  var resumeQuill = initRichTextEditor('resume-editor', 'resume_html');
+  initResumeExtractUpload('resume_file', 'resume_extract_status', resumeQuill);
 </script>
 {{end}}
