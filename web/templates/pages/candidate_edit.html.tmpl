@@ -151,6 +151,6 @@
 {{define "scripts"}}
 <script>
   var resumeQuill = initRichTextEditor('resume-editor', 'resume_html');
-  initResumeExtractUpload('resume_file', 'resume_extract_status', resumeQuill, {{$c.Slug}});
+  initResumeExtractUpload('resume_file', 'resume_extract_status', resumeQuill, {{.Data.Candidate.Slug}});
 </script>
 {{end}}
