@@ -13,6 +13,10 @@
           <td class="text-end">
             <a href="/jobs/{{.Job.Slug}}" class="me-2" target="_blank" rel="noopener">View</a>
             <a href="/admin/jobs/{{.Job.ID}}/edit">Edit</a>
+            <form method="post" action="/admin/jobs/{{.Job.ID}}/delete" class="d-inline ms-2" onsubmit="return confirm('Permanently delete this job? This cannot be undone.');">
+              <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+              <button type="submit" class="btn btn-link btn-sm text-danger p-0 align-baseline">Delete</button>
+            </form>
           </td>
         </tr>
       {{end}}

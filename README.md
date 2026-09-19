@@ -302,6 +302,21 @@ links (no third-party script, no account, no tracking) built with one shared par
 on its view struct and one `{{template "share_buttons.html.tmpl" .}}` call. "Copy Link" is the only
 part needing JavaScript (`web/static/js/share.js`, using the Clipboard API, loaded globally).
 
+## Notable profile-deletion decisions
+
+Post-spec addition: candidates can delete their own profile, and admins can delete candidates,
+companies (employers) and jobs. Deletion removes the owning `users` row (`UserRepo.Delete`, which
+refuses admin users) and lets the existing `ON DELETE CASCADE` foreign keys remove the profile, its
+jobs, files, votes, messages and sessions — so deleting a candidate/company also removes that
+person's side of any message threads. Stored uploads (photo, logo, candidate files) aren't covered
+by the DB, so their keys are collected first and deleted best-effort afterwards (`account_delete.go`);
+a storage failure leaves an orphaned file, never a half-deleted account. A candidate's self-delete
+(`POST /candidates/{slug}/delete`, bottom of the edit page) requires re-entering their password;
+admin deletes (`POST /admin/{candidates,employers,jobs}/{id}/delete`, buttons on the admin lists)
+use a browser confirm prompt. Deleting a company deletes all of its jobs. The hourly `search_index`
+materialized view may list a deleted profile until its next refresh; live search and pages read the
+base tables, so they're correct immediately.
+
 ## Notable deployment decisions
 
 - **The app is deployed as a Docker image** (see `Dockerfile`) rather than relying on Railway's

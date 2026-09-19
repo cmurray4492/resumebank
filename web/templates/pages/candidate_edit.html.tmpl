@@ -144,6 +144,22 @@
         <button type="submit" class="btn btn-outline-secondary">Upload</button>
       </div>
     </form>
+
+    <hr class="my-5">
+
+    <h2 class="h4 text-danger">Delete Profile</h2>
+    <p class="text-muted">Permanently deletes your profile, resume, uploaded files, messages and account. This cannot be undone.</p>
+    <form action="/candidates/{{$c.Slug}}/delete" method="post" class="row g-2 align-items-end" onsubmit="return confirm('Permanently delete your profile and account? This cannot be undone.');">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <div class="col-auto">
+        <label class="form-label" for="delete_password">Confirm your password</label>
+        <input type="password" class="form-control {{if index .Errors "delete_password"}}is-invalid{{end}}" id="delete_password" name="password" autocomplete="current-password" required>
+        {{with index .Errors "delete_password"}}<div class="invalid-feedback d-block">{{.}}</div>{{end}}
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-danger">Delete My Profile</button>
+      </div>
+    </form>
   </div>
 </div>
 {{end}}

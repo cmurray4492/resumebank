@@ -124,3 +124,20 @@ func (h *AdminEmployerHandlers) loadEmployer(w http.ResponseWriter, r *http.Requ
 	}
 	return employer, true
 }
+
+// Delete removes the company's account along with all of its jobs.
+func (h *AdminEmployerHandlers) Delete(w http.ResponseWriter, r *http.Request) {
+	employer, ok := h.loadEmployer(w, r)
+	if !ok {
+		return
+	}
+	if !h.App.Auth.VerifyCSRF(r) {
+		http.Error(w, "Invalid or missing CSRF token", http.StatusForbidden)
+		return
+	}
+	if err := deleteEmployerAccount(r.Context(), h.App, employer); err != nil {
+		httpServerError(w, err)
+		return
+	}
+	http.Redirect(w, r, "/admin/employers", http.StatusSeeOther)
+}

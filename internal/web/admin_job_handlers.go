@@ -132,3 +132,19 @@ func (h *AdminJobHandlers) loadJob(w http.ResponseWriter, r *http.Request) (*mod
 	}
 	return job, true
 }
+
+func (h *AdminJobHandlers) Delete(w http.ResponseWriter, r *http.Request) {
+	job, ok := h.loadJob(w, r)
+	if !ok {
+		return
+	}
+	if !h.App.Auth.VerifyCSRF(r) {
+		http.Error(w, "Invalid or missing CSRF token", http.StatusForbidden)
+		return
+	}
+	if err := h.App.Jobs.Delete(r.Context(), job.ID); err != nil {
+		httpServerError(w, err)
+		return
+	}
+	http.Redirect(w, r, "/admin/jobs", http.StatusSeeOther)
+}

@@ -63,6 +63,7 @@ func NewRouter(a *app.App) http.Handler {
 	mux.HandleFunc("POST /candidates/{slug}/photo", a.Auth.RequireRole(models.RoleCandidate, candidateH.UploadPhoto))
 	mux.HandleFunc("POST /candidates/{slug}/photo/delete", a.Auth.RequireRole(models.RoleCandidate, candidateH.DeletePhoto))
 	mux.HandleFunc("POST /candidates/resume/extract", candidateH.ExtractResume)
+	mux.HandleFunc("POST /candidates/{slug}/delete", a.Auth.RequireRole(models.RoleCandidate, candidateH.DeleteProfile))
 	mux.HandleFunc("POST /candidates/{slug}/files", a.Auth.RequireRole(models.RoleCandidate, candidateH.UploadFile))
 	mux.HandleFunc("POST /candidates/{slug}/files/{fileID}/delete", a.Auth.RequireRole(models.RoleCandidate, candidateH.DeleteFile))
 
@@ -118,14 +119,17 @@ func NewRouter(a *app.App) http.Handler {
 	mux.HandleFunc("GET /admin/candidates", a.Auth.RequireAdmin(adminCandidateH.List))
 	mux.HandleFunc("GET /admin/candidates/{id}/edit", a.Auth.RequireAdmin(adminCandidateH.EditForm))
 	mux.HandleFunc("POST /admin/candidates/{id}/edit", a.Auth.RequireAdmin(adminCandidateH.Update))
+	mux.HandleFunc("POST /admin/candidates/{id}/delete", a.Auth.RequireAdmin(adminCandidateH.Delete))
 
 	mux.HandleFunc("GET /admin/employers", a.Auth.RequireAdmin(adminEmployerH.List))
 	mux.HandleFunc("GET /admin/employers/{id}/edit", a.Auth.RequireAdmin(adminEmployerH.EditForm))
 	mux.HandleFunc("POST /admin/employers/{id}/edit", a.Auth.RequireAdmin(adminEmployerH.Update))
+	mux.HandleFunc("POST /admin/employers/{id}/delete", a.Auth.RequireAdmin(adminEmployerH.Delete))
 
 	mux.HandleFunc("GET /admin/jobs", a.Auth.RequireAdmin(adminJobH.List))
 	mux.HandleFunc("GET /admin/jobs/{id}/edit", a.Auth.RequireAdmin(adminJobH.EditForm))
 	mux.HandleFunc("POST /admin/jobs/{id}/edit", a.Auth.RequireAdmin(adminJobH.Update))
+	mux.HandleFunc("POST /admin/jobs/{id}/delete", a.Auth.RequireAdmin(adminJobH.Delete))
 
 	var handler http.Handler = mux
 	handler = a.Auth.LoadAdminSession(handler)

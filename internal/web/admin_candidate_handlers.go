@@ -141,3 +141,19 @@ func (h *AdminCandidateHandlers) loadCandidate(w http.ResponseWriter, r *http.Re
 	}
 	return candidate, true
 }
+
+func (h *AdminCandidateHandlers) Delete(w http.ResponseWriter, r *http.Request) {
+	candidate, ok := h.loadCandidate(w, r)
+	if !ok {
+		return
+	}
+	if !h.App.Auth.VerifyCSRF(r) {
+		http.Error(w, "Invalid or missing CSRF token", http.StatusForbidden)
+		return
+	}
+	if err := deleteCandidateAccount(r.Context(), h.App, candidate); err != nil {
+		httpServerError(w, err)
+		return
+	}
+	http.Redirect(w, r, "/admin/candidates", http.StatusSeeOther)
+}

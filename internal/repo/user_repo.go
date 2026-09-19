@@ -64,6 +64,20 @@ func (r *UserRepo) GetUserByID(ctx context.Context, id int64) (*models.User, err
 	return u, nil
 }
 
+// Delete removes a non-admin user. Foreign keys cascade to the user's
+// candidate/employer profile (and its jobs, files, votes), messages, sessions
+// and reset tokens. Admin users are never deleted here.
+func (r *UserRepo) Delete(ctx context.Context, id int64) error {
+	tag, err := r.pool.Exec(ctx, `DELETE FROM users WHERE id = $1 AND role <> $2`, id, models.RoleAdmin)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func (r *UserRepo) UpdateLastLogin(ctx context.Context, id int64) error {
 	_, err := r.pool.Exec(ctx, `UPDATE users SET last_login_at = now() WHERE id = $1`, id)
 	return err
