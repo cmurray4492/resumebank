@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	bulletRE  = regexp.MustCompile(`^[•\-*‣◦]\s+`)
+	bulletRE  = regexp.MustCompile(`^(?:[•‣◦▪●○·\x{F0B7}\x{F0A7}]\s*|[\-*–]\s+)`)
 	orderedRE = regexp.MustCompile(`^\d+[.)]\s+`)
 )
 
@@ -30,13 +30,23 @@ type extractedLine struct {
 // characters) and doubles as a fallback for DOCX paragraphs that were typed
 // as literal list markers rather than styled with Word's numbering feature.
 func classifyLine(text string) extractedLine {
+	n, kind := listMarker(text)
+	if kind == kindParagraph {
+		return extractedLine{text: text, kind: kindParagraph}
+	}
+	return extractedLine{text: strings.TrimSpace(text[n:]), kind: kind}
+}
+
+// listMarker reports the byte length and kind of a literal leading
+// bullet/numbering marker in text, or (0, kindParagraph) if there is none.
+func listMarker(text string) (int, lineKind) {
 	if loc := bulletRE.FindStringIndex(text); loc != nil {
-		return extractedLine{text: strings.TrimSpace(text[loc[1]:]), kind: kindBullet}
+		return loc[1], kindBullet
 	}
 	if loc := orderedRE.FindStringIndex(text); loc != nil {
-		return extractedLine{text: strings.TrimSpace(text[loc[1]:]), kind: kindOrdered}
+		return loc[1], kindOrdered
 	}
-	return extractedLine{text: text, kind: kindParagraph}
+	return 0, kindParagraph
 }
 
 // buildHTML groups consecutive list lines of the same kind into one <ol>

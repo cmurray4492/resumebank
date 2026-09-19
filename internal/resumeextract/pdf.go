@@ -24,6 +24,15 @@ func extractPDFHTML(data []byte) (string, error) {
 		return "", fmt.Errorf("%w: %v", ErrCorruptFile, err)
 	}
 
+	// Preferred path: rebuild headings, bold/italic and wrapped paragraphs
+	// from glyph fonts/sizes/positions. Falls back to plain text below if
+	// the content stream can't be read that way or yields nothing.
+	if lines, err := extractPDFStyledLines(r); err == nil && len(lines) > 0 {
+		if out := buildStyledHTML(lines); out != "" {
+			return out, nil
+		}
+	}
+
 	textReader, err := r.GetPlainText()
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrCorruptFile, err)
