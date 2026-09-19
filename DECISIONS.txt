@@ -1,0 +1,89 @@
+RESUMEBANK - DECISION SUMMARY (resume auto-extract, signup PDF upload, Railway fix, PDF formatting, profile deletion)
+Sessions: 2026-09-18 and 2026-09-19
+
+1. STATE FOUND AT START
+- Uncommitted work: internal/resumeextract/ (PDF + DOCX -> Quill-ready HTML), internal/web/resume_extract_handler.go, route POST /candidates/resume/extract, deps jh125486/pdf and xavier268/mydocx.
+- Verified: go build clean, 12 resumeextract tests pass. Committed (65ad2c5) and pushed on request.
+
+2. EXTRACT ENDPOINT DESIGN (existing code, as reviewed)
+- Public route (no login) so it works at candidate signup; CSRF is still verified.
+- Output is passed through sanitize.SanitizeRichText before returning.
+- Endpoint never writes resume_html/resume_text; the normal form save does that.
+- If candidate_slug is sent, the user owns that candidate, and the file is a PDF, the PDF is also saved as resume_pdf - only if none exists (never overwrites). Bad/forged slug is silently ignored.
+
+3. FRONTEND WIRING (commit b9f2a85)
+- initRichTextEditor now returns the Quill instance so other scripts can drive it.
+- New web/static/js/resume_extract.js, loaded in base.html.tmpl.
+- CSRF token is read from the form's existing hidden csrf_token input (not templated into JS) to match existing patterns and avoid JS-context escaping concerns.
+- Scope: candidate signup and candidate edit pages only. Admin candidate edit NOT wired (admin has its own file flow).
+- Candidate edit passes the candidate slug so the PDF-save side effect applies; signup passes none.
+
+4. REQUIRED PDF UPLOAD AT SIGNUP (user request: "a way to upload the resume when the profile is built")
+- Two separate file inputs, on purpose:
+  a) Auto-fill (PDF or DOCX, optional, no name attr, never submitted) - only pre-fills the editor.
+  b) "Resume PDF *" (name=resume_pdf, .pdf only, required) - submitted and stored as the candidate's resume_pdf file.
+  Reason: spec requires a PDF specifically, while auto-fill also accepts DOCX; mirrors the edit page's existing split.
+- Made required (spec summary says PDF resume is required), validated server-side BEFORE any user/candidate row is created.
+- Signup form switched to multipart/form-data; handler uses MaxBytesReader + ParseMultipartForm with Config.MaxUploadBytes.
+- Validation is extension-only (storage.ValidateExtension), same as existing upload handler; no content sniffing.
+- Failure after candidate creation (storage save / file record): log, delete stored file if needed, return 500. Orphaned user/candidate rows are left - consistent with the existing no-transaction pattern in this handler.
+
+5. PRODUCTION INCIDENT (Railway crash-loop) AND FIX (commit c5aa723)
+- Cause: candidate_edit.html.tmpl {{define "scripts"}} used {{$c.Slug}}, but $c only exists in the "content" block. Go treats this as a parse-time error; templates are parsed eagerly at startup, so the whole app failed to boot.
+- Diagnosed directly with the Railway CLI (railway status / logs --build / logs --deployment).
+- Fix: use .Data.Candidate.Slug.
+- Added internal/render/render_test.go (TestAllTemplatesParse), a DB-free test that parses all page templates - kept permanently rather than as a throwaway.
+- Confirmed live: service Online, clean startup log, https://www.resumebank.biz/ returned 200.
+
+6. WHY IT WASN'T CAUGHT BEFORE PUSH
+- go build / go vet do not parse template bodies.
+- DB-gated tests (which do render the edit page) silently skip without TEST_DATABASE_URL; Docker was not running, so "all green" did not mean they ran.
+- Saved to memory: run TestAllTemplatesParse before pushing template changes; use the linked Railway CLI first for deploy problems.
+
+7. PDF FORMATTING PRESERVED IN AUTO-FILL (user feedback: "text was uploaded but none of the formatting was used"; commit 44272ad)
+- Cause: the extractor used plain text only, so every line became a <p>.
+- Now reads per-glyph font, size and position (pdf.Page.Content) and rebuilds: h1/h2/h3 headings, <strong>/<em> runs, wrapped paragraphs and wrapped bullets joined back together. New file internal/resumeextract/pdf_layout.go.
+- Heading rules: size >= 1.6x body -> h1; >= 1.25x -> h2; bold ALL-CAPS short line -> h2; bold and >= 1.1x -> h3. Body size = most common size by character count.
+- Paragraph lines are merged only when the previous line visibly ran to the right margin (>= 85% of page text width) with no big internal gap (right-aligned dates), same left edge and same boldness. Short standalone lines (name, title, contact, "Company    dates") therefore stay separate.
+- Bullet continuation lines (indented past the marker) are joined into the same list item.
+- Word gaps with no space glyph (common in word-processor PDFs) are turned into spaces using glyph X/width.
+- Bold/italic is inferred from the font name (Bold/Black/Heavy/Demi, Italic/Oblique). More bullet glyphs recognised (private-use Symbol bullets, square/circle bullets, en dash).
+- Falls back to the old plain-text path if the styled read fails or is empty.
+- Library note: this library's Content() panics on malformed streams, so it is wrapped in recover. Fonts without /Widths do not advance X, so the test fixture supplies widths like real PDFs do.
+- DOCX still has no bold/italic (not requested).
+- Known limits: multi-column layouts interleave; scanned/image-only PDFs give no text; thresholds are heuristics tuned on a synthetic PDF plus the user's own real-resume test.
+
+8. PROFILE DELETION (post-spec addition requested by user; commit 416aa21)
+- Candidates can delete their own profile; admins can delete candidates, companies (employers) and jobs.
+- Mechanism: delete the owning users row (UserRepo.Delete) and rely on the existing ON DELETE CASCADE foreign keys (candidate/employer, jobs, files, votes, messages, sessions, reset tokens). No new migration.
+- UserRepo.Delete refuses admin users (role <> 'admin'), returning ErrNotFound.
+- Deleting a candidate/company also removes the counterpart's copy of message threads with them (cascade on sender/recipient) - accepted consequence, documented in README.
+- Deleting a company deletes all its jobs. Deleting a single job leaves the company.
+- Stored uploads (photo, logo, candidate files) are not covered by the DB: keys are collected first and deleted best-effort AFTER the DB delete. A storage failure leaves an orphaned file, never a half-deleted account.
+- Candidate self-delete: POST /candidates/{slug}/delete, RequireRole(candidate) + ownership check + CSRF + password re-entry (irreversible action; a stolen session should not be enough). Wrong password re-renders the edit page with a 422 error. Success clears the session cookie and redirects to /.
+- Admin delete: POST /admin/{candidates,employers,jobs}/{id}/delete behind RequireAdmin + CSRF; buttons on the admin list pages with a browser confirm() prompt. No CSP is set, so inline onsubmit works.
+- Logic lives in internal/web/account_delete.go as free functions over *app.App so candidate and admin handlers share it.
+- Employer self-delete was NOT requested and is not implemented.
+- The hourly search_index materialized view may list a deleted profile until its next refresh; live search, pages and sitemap read base tables, so they are correct immediately.
+- README has a new "Notable profile-deletion decisions" section.
+- Tests (internal/web/account_delete_test.go, DB-gated): wrong password keeps account; correct password deletes user/candidate/session/stored file; cannot delete another candidate (403); admin deletes candidate, job, employer (jobs cascade); non-admin cannot use admin delete; admins are never deletable.
+
+9. VERIFICATION
+- Full suite run with a real Postgres (Docker pgvector on port 5433, TEST_DATABASE_URL, go test -p 1 ./...): all packages pass, so DB-gated tests actually executed this time.
+- The temporary test container was removed afterwards; Docker Desktop was started for this and left running.
+- User reported the signup PDF upload/auto-fill worked end-to-end after the formatting fix, and that the deletion feature "worked well".
+
+10. OPEN ITEMS
+- SPEC.md is referenced by CLAUDE.md but was not found in the repo.
+- Signup form does not repopulate fields after a validation error (pre-existing); a file input can't be repopulated at all, so the user must re-pick the PDF after an error.
+- PDF upload check is extension-only; a non-PDF renamed to .pdf would be accepted.
+- Admin candidate edit has no auto-extract.
+- go.mod marks jh125486/pdf and xavier268/mydocx as "// indirect" although they are imported directly (go mod tidy would fix; harmless).
+- DOCX extraction has no bold/italic.
+
+11. COMMITS (all pushed to origin/master, each on explicit user request)
+- 65ad2c5  Add resume auto-extract from uploaded PDF/DOCX
+- b9f2a85  Wire up resume auto-extract in the UI and require a PDF at signup
+- c5aa723  Fix production crash-loop: undefined $c in candidate_edit scripts block
+- 44272ad  Preserve formatting when extracting text from PDF resumes
+- 416aa21  Add profile deletion for candidates and admin deletion of candidates, companies, jobs
